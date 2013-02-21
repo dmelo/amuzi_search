@@ -5,9 +5,9 @@
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<pthread.h>
-#include "kmp.h"
+#include "bmh.h"
 
-KMP *kmp = new KMP();
+BMH *bmh = new BMH();
 
 void error(const char *msg)
 {
@@ -42,7 +42,7 @@ void con_handler(void *data)
             }
 
 
-            ret = kmp->search(buffer, 1000);
+            ret = bmh->search(buffer, 1000);
             printf("message: %s\n", buffer);
             for (int i = 0; i < 1000; i++) {
                 if (NULL != ret[i]) {
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
     struct sockaddr_in serv_addr, cli_addr;
 
 
-    kmp->load_file(argv[1]);
+    bmh->load_file(argv[1]);
 
 
 

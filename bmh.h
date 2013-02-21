@@ -1,14 +1,14 @@
-#ifndef KMP_H
-#define KMP_H
+#ifndef BMH_H
+#define BMH_H
 
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 #include "timer.h"
 
-class KMP {
+class BMH {
     public:
-        KMP();
+        BMH();
         bool load_file(char *filename);
         char **search(char *substr, unsigned int limit);
 

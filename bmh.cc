@@ -1,6 +1,6 @@
-#include "kmp.h"
+#include "bmh.h"
 
-KMP::KMP()
+BMH::BMH()
 {
     full_text = NULL;
     size = 0;
@@ -10,7 +10,7 @@ KMP::KMP()
  * Every line from the file must have the following format:
  * ID$$TEXT, being id a number and TEXT the searchable text.
  */
-bool KMP::load_file(char *filename)
+bool BMH::load_file(char *filename)
 {
     timer t;
     t.start();
@@ -40,7 +40,7 @@ bool KMP::load_file(char *filename)
     return ret;
 }
 
-char **KMP::search(char *substr, unsigned int limit)
+char **BMH::search(char *substr, unsigned int limit)
 {
     timer t;
     t.start();
