@@ -51,6 +51,7 @@ char **KMP::search(char *substr, unsigned int limit)
     for (i = 0; i < size && n_found < limit; i++) {
         for (j = 0; full_text[i + j] == substr[j] && j < sub_size; j++);
         if (sub_size == j) { // We have a match.
+            printf("match found at %d\n", i);
             for(start = i; '\n' != full_text[start] && start >= 0; start--);
             if (0 != start) {
                 start++;
@@ -66,7 +67,7 @@ char **KMP::search(char *substr, unsigned int limit)
     }
 
     t.end();
-    printf("search %s %d -> %s\n", substr, limit, t.toString());
+    printf("search %s %u -> %s\n", substr, limit, t.toString());
 
     return ret;
 }
