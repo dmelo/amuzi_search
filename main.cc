@@ -8,6 +8,7 @@
 #include "bmh.h"
 
 BMH *bmh = new BMH();
+pthread_mutex_t lock;
 
 void error(const char *msg)
 {
@@ -28,10 +29,13 @@ void con_handler(void *data)
     bzero(buffer, 256);
     while (1) {
         n = read(newsockfd, buffer, 255);
+        printf("read %d bytes.\n", n);
         if (n < 0) {
             error("ERROR reading from socket");
-        }
-        if (n >= 3) {
+        } else if (0 == n) {
+            printf("connection halted.\n");
+            break;
+        } else if (n >= 3) {
             printf("message: %s\n", buffer);
 
             for (int i = 0; i < strlen(buffer); i++) {
@@ -42,7 +46,9 @@ void con_handler(void *data)
             }
 
 
+            pthread_mutex_lock(&lock);
             ret = bmh->search(buffer, 1000);
+            pthread_mutex_unlock(&lock);
             printf("message: %s\n", buffer);
             for (int i = 0; i < 1000; i++) {
                 if (NULL != ret[i]) {
@@ -51,6 +57,14 @@ void con_handler(void *data)
             }
         }
     }
+
+    free(buffer);
+    for (int i = 0; i < 1000; i++) {
+        if (NULL != ret[i]) {
+            free(ret[i]);
+        }
+    }
+    free(ret);
 
     printf("connection is over\n");
 }
@@ -63,14 +77,21 @@ int main(int argc, char **argv)
     struct sockaddr_in serv_addr, cli_addr;
 
 
+    // Initialize BMH
     bmh->load_file(argv[1]);
 
 
+    // Initialize mutex
+    if (pthread_mutex_init(&lock, NULL) != 0) {
+        error("ERROR could not initialize mutex\n");
+    }
 
+
+    // Prepare to listen on socket
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sockfd < 0) {
-        error("ERROR opening socket");
+        error("ERROR opening socket\n");
     }
     bzero((char *) &serv_addr, sizeof(serv_addr));
     portno = atoi(argv[2]);
