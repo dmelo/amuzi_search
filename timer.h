@@ -15,6 +15,7 @@ class timer {
         bool ended;
         struct timeval st;
         struct timeval en;
+        char ret[60];
     public:
         timer();
         void restart();

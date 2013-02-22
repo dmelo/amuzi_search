@@ -4,7 +4,7 @@ BMH::BMH()
 {
     full_text = NULL;
     size = 0;
-}
+};
 
 /**
  * Every line from the file must have the following format:
@@ -40,18 +40,19 @@ bool BMH::load_file(char *filename)
     return ret;
 }
 
-char **BMH::search(char *substr, unsigned int limit)
+char **BMH::search(char *substr)
 {
     timer t;
     t.start();
-    unsigned int i, j, sub_size, start, end, n_found = 0;
-    char **ret = (char **) calloc(limit, sizeof(char *));
+    unsigned int i, j, sub_size, start, end, n_found = 0, aux, stringListIndexI;
+    char **ret = (char **) calloc(BHM_LIMIT, sizeof(char *));
+
+    memset(stringList, 0, MAX_STRING_MAX_LENGTH * sizeof(StringNode*));
 
     sub_size = strlen(substr);
-    for (i = 0; i < size && n_found < limit; i++) {
+    for (i = 0; i < size && n_found < BHM_LIMIT; i++) {
         for (j = 0; full_text[i + j] == substr[j] && j < sub_size; j++);
         if (sub_size == j) { // We have a match.
-            printf("match found at %d\n", i);
             for(start = i; '\n' != full_text[start] && start >= 0; start--);
             start++;
             for(end = i; '\n' != full_text[end] && end < size; end++);
@@ -59,13 +60,58 @@ char **BMH::search(char *substr, unsigned int limit)
             for (j = 0; j < end - start; j++) {
                 ret[n_found][j] = full_text[start + j];
             }
-            ret[j] = '\0';
+            ret[n_found][j] = '\0';
             n_found++;
         }
     }
 
+    timer t2;
+    t2.start();
+    // If found more than 100 strings, sort it by length.
+    if (n_found > 100) {
+        stringListIndexI = 0;
+        memset(stringListIndex, 0, BHM_LIMIT * sizeof(StringNode *));
+        for (i = 0; i < n_found; i++) {
+            aux = strlen(ret[i]);
+            snode = new StringNode();
+            snode->s = ret[i];
+            snode->next = NULL;
+            stringListIndex[stringListIndexI] = snode;
+            stringListIndexI++;
+            if (NULL == stringList[aux]) {
+                stringList[aux] = snode;
+            } else {
+                snodeAux = stringList[aux];
+                while (NULL != snodeAux->next) {
+                    snodeAux = snodeAux->next;
+                }
+                snodeAux->next = snode;
+            }
+        }
+
+        memset(ret, 0, BHM_LIMIT * sizeof(char *));
+        n_found = 0;
+        for (i = 0; i < MAX_STRING_MAX_LENGTH; i++) {
+            if (NULL != stringList[i]) {
+                snodeAux = stringList[i];
+                while (NULL != snodeAux) {
+                    ret[n_found] = snodeAux->s;
+                    snodeAux = snodeAux->next;
+                    n_found++;
+                }
+            }
+        }
+
+        // Free StringNodes.
+        for (i = 0; i < stringListIndexI; i++) {
+            delete(stringListIndex[i]);
+        }
+    }
+    t2.end();
+    printf("sorting %d strings -> %s\n", n_found, t2.toString());
+
     t.end();
-    printf("search %s %u -> %s\n", substr, limit, t.toString());
+    printf("search %s %u -> %s\n", substr, BHM_LIMIT, t.toString());
 
     return ret;
 }

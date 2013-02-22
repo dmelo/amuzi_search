@@ -44,7 +44,6 @@ struct timeval timer::getDiff() {
 }
 
 char *timer::toString() {
-    char *ret = (char *) malloc(60 * sizeof(char));
     struct timeval tv = getDiff();
     sprintf(ret, "timer - sec: %d. msec: %d. usec: %d.", (int) tv.tv_sec, 
 	    (int) tv.tv_usec / 1000, 
