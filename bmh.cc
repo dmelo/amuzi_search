@@ -53,12 +53,10 @@ char **BMH::search(char *substr, unsigned int limit)
         if (sub_size == j) { // We have a match.
             printf("match found at %d\n", i);
             for(start = i; '\n' != full_text[start] && start >= 0; start--);
-            if (0 != start) {
-                start++;
-            }
+            start++;
             for(end = i; '\n' != full_text[end] && end < size; end++);
-            ret[n_found] = (char *) malloc((end - start + 2) * sizeof(char));
-            for (j = 0; j <= end - start; j++) {
+            ret[n_found] = (char *) malloc((end - start + 1) * sizeof(char));
+            for (j = 0; j < end - start; j++) {
                 ret[n_found][j] = full_text[start + j];
             }
             ret[j] = '\0';

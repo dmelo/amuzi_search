@@ -5,6 +5,7 @@
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<pthread.h>
+#include<signal.h>
 #include "bmh.h"
 
 BMH *bmh = new BMH();
@@ -16,12 +17,23 @@ void error(const char *msg)
     exit(1);
 }
 
+static void catch_sigpipe(int signal)
+{
+    printf("SIGPIPE thrown");
+}
+
 void con_handler(void *data)
 {
-    char *buffer = (char *) malloc(256 * sizeof(char)), **ret;
+    char *buffer = (char *) malloc(256 * sizeof(char)), **ret,
+         *response = (char *) malloc(512 * 1024 * sizeof(char));
     int newsockfd = *((int *) data), n;
 
     printf("confirming creation of socket %d\n", newsockfd);
+
+    // Handling sigpipe
+    if (signal(SIGPIPE, catch_sigpipe) == SIG_ERR) {
+        error("Could not set handler to SIGPIPE");
+    }
 
     if (newsockfd < 0) {
         error("ERROR on accept");
@@ -31,7 +43,8 @@ void con_handler(void *data)
         n = read(newsockfd, buffer, 255);
         printf("read %d bytes.\n", n);
         if (n < 0) {
-            error("ERROR reading from socket");
+            printf("ERROR reading from socket\n");
+            break;
         } else if (0 == n) {
             printf("connection halted.\n");
             break;
@@ -50,11 +63,14 @@ void con_handler(void *data)
             ret = bmh->search(buffer, 1000);
             pthread_mutex_unlock(&lock);
             printf("message: %s\n", buffer);
+            strcpy(response, "");
             for (int i = 0; i < 1000; i++) {
                 if (NULL != ret[i]) {
-                    write(newsockfd, ret[i], strlen(ret[i]));
+                    strcat(response, ret[i]);
+                    strcat(response, "\n");
                 }
             }
+            write(newsockfd, response, strlen(response));
         }
     }
 
