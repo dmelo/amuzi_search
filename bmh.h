@@ -7,7 +7,7 @@
 #include "timer.h"
 
 #define BHM_LIMIT 1000
-#define MAX_STRING_MAX_LENGTH 2048
+#define MAX_STRING_MAX_LENGTH 4096
 
 class StringNode {
     public:

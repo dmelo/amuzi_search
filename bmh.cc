@@ -67,8 +67,7 @@ char **BMH::search(char *substr)
 
     timer t2;
     t2.start();
-    // If found more than 100 strings, sort it by length.
-    if (n_found > 100) {
+    if (n_found > 0) {
         stringListIndexI = 0;
         memset(stringListIndex, 0, BHM_LIMIT * sizeof(StringNode *));
         for (i = 0; i < n_found; i++) {

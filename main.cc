@@ -40,7 +40,9 @@ void con_handler(void *data)
     }
     bzero(buffer, 256);
     while (1) {
-        n = read(newsockfd, buffer, 255);
+        n = recv(newsockfd, buffer, 255, 0);
+        timer t;
+        t.start();
         printf("read %d bytes.\n", n);
         if (n < 0) {
             printf("ERROR reading from socket\n");
@@ -70,7 +72,12 @@ void con_handler(void *data)
                     strcat(response, "\n");
                 }
             }
-            write(newsockfd, response, strlen(response));
+            if (strcmp("", response) == 0) {
+                strcpy(response, "0\n");
+            }
+            send(newsockfd, response, strlen(response), 0);
+            t.end();
+            printf("on con_handler %s\n", t.toString());
             for (int i = 0; i < BHM_LIMIT; i++) {
                 if (NULL != ret[i]) {
                     free(ret[i]);
