@@ -25,7 +25,7 @@ static void catch_sigpipe(int signal)
 
 void con_handler(void *data)
 {
-    char *buffer = (char *) malloc(256 * sizeof(char)), **ret;
+    unsigned char *buffer = (unsigned char *) malloc(256 * sizeof(unsigned char)), **ret;
     int newsockfd = *((int *) data), n;
 
     printf("confirming creation of socket %d\n", newsockfd);
@@ -53,7 +53,7 @@ void con_handler(void *data)
         } else if (n >= 3) {
             printf("message: %s\n", buffer);
 
-            for (int i = 0; i < strlen(buffer); i++) {
+            for (int i = 0; i < strlen((char *) buffer); i++) {
                 if ('\r' == buffer[i] || '\n' == buffer[i]) {
                     buffer[i] = '\0';
                     break;
@@ -66,9 +66,9 @@ void con_handler(void *data)
             pthread_mutex_unlock(&lock);
             printf("message: %s\n", buffer);
             strcpy(response, "");
-            for (int i = 0; i < BHM_LIMIT; i++) {
+            for (int i = 0; i < BMH_LIMIT; i++) {
                 if (NULL != ret[i]) {
-                    strcat(response, ret[i]);
+                    strcat(response, (char *) ret[i]);
                     strcat(response, "\n");
                 }
             }
@@ -78,7 +78,7 @@ void con_handler(void *data)
             send(newsockfd, response, strlen(response), 0);
             t.end();
             printf("on con_handler %s\n", t.toString());
-            for (int i = 0; i < BHM_LIMIT; i++) {
+            for (int i = 0; i < BMH_LIMIT; i++) {
                 if (NULL != ret[i]) {
                     free(ret[i]);
                 }
