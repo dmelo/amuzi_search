@@ -8,7 +8,7 @@
 #include<signal.h>
 #include "bmh.h"
 
-BMH *bmh = new BMH();
+SearchAlg *sa;
 pthread_mutex_t lock;
 char response[512 * 1024];
 
@@ -62,7 +62,7 @@ void con_handler(void *data)
 
 
             pthread_mutex_lock(&lock);
-            ret = bmh->search(buffer);
+            ret = sa->search(buffer);
             pthread_mutex_unlock(&lock);
             printf("message: %s\n", buffer);
             strcpy(response, "");
@@ -94,47 +94,56 @@ void con_handler(void *data)
 
 int main(int argc, char **argv)
 {
+    sa = NULL;
     pthread_t thread;
     int sockfd, *newsockfd, portno, on = 1;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
 
 
-    // Initialize BMH
-    bmh->load_file(argv[1]);
+    if (4 != argc) {
+        printf("Usage: amuzi_search {bmh|suffixarray} file port\n");
+    } else {
+        // Algorithm
+        if (strcmp("bhm", argv[1])) {
+            sa = new BMH();
+        }
+
+        // Initialize
+        sa->loadFile(argv[2]);
 
 
-    // Initialize mutex
-    if (pthread_mutex_init(&lock, NULL) != 0) {
-        error("ERROR could not initialize mutex\n");
+        // Initialize mutex
+        if (pthread_mutex_init(&lock, NULL) != 0) {
+            error("ERROR could not initialize mutex\n");
+        }
+
+        // Prepare to listen on socket
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+        if (sockfd < 0) {
+            error("ERROR opening socket\n");
+        }
+        bzero((char *) &serv_addr, sizeof(serv_addr));
+        portno = atoi(argv[3]);
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
+        serv_addr.sin_port = htons(portno);
+        setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+        if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+            error("ERROR binding");
+        }
+        listen(sockfd, 5);
+        clilen = sizeof(cli_addr);
+        while (1) {
+            newsockfd = (int *) malloc(sizeof(int));
+            *newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+            printf("creating socket: %d\n", *newsockfd);
+            pthread_create(&thread, NULL, (void* (*)(void*)) &con_handler, (void *) newsockfd);
+        }
+
+        close(sockfd);
     }
-
-
-    // Prepare to listen on socket
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-    if (sockfd < 0) {
-        error("ERROR opening socket\n");
-    }
-    bzero((char *) &serv_addr, sizeof(serv_addr));
-    portno = atoi(argv[2]);
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(portno);
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        error("ERROR binding");
-    }
-    listen(sockfd, 5);
-    clilen = sizeof(cli_addr);
-    while (1) {
-        newsockfd = (int *) malloc(sizeof(int));
-        *newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-        printf("creating socket: %d\n", *newsockfd);
-        pthread_create(&thread, NULL, (void* (*)(void*)) &con_handler, (void *) newsockfd);
-    }
-
-    close(sockfd);
 
     return 0;
 }

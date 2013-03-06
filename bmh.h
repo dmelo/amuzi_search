@@ -6,22 +6,16 @@
 #include<string.h>
 #include<limits.h>
 #include "timer.h"
+#include "searchalg.h"
 
 #define BMH_LIMIT 1000
 #define MAX_STRING_MAX_LENGTH 4096
 
-class StringNode {
-    public:
-        unsigned char *s;
-        StringNode *next;
-};
-
-class BMH {
+class BMH : public SearchAlg {
     public:
         BMH();
-        bool load_file(char *filename);
+        bool loadFile(char *filename);
         unsigned char **search(unsigned char *substr);
-
 
     private:
         unsigned char *full_text, bad_char_skip[UCHAR_MAX + 1];

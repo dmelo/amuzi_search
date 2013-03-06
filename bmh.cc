@@ -10,7 +10,7 @@ BMH::BMH()
  * Every line from the file must have the following format:
  * ID$$TEXT, being id a number and TEXT the searchable text.
  */
-bool BMH::load_file(char *filename)
+bool BMH::loadFile(char *filename)
 {
     timer t;
     t.start();
@@ -74,7 +74,6 @@ unsigned char **BMH::search(unsigned char *substr)
             n_found++;
             i++;
         }
-        // printf("j == %d, skiping %d. curpos %d / %d -- badchar %d\n", j, bad_char_skip[full_text[i + sub_size - 1]], i, size - sub_size, full_text[i + sub_size - 1]);
         i += bad_char_skip[full_text[i + sub_size - 1]];
     }
 
