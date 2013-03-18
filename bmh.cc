@@ -12,36 +12,20 @@ BMH::BMH()
  */
 bool BMH::loadFile(char *filename)
 {
-    timer t;
-    t.start();
-
-    FILE *fd;
-    bool ret;
-
-    if ((fd = fopen(filename, "rb")) != NULL) {
-        fseek(fd, 0, SEEK_END);
-        size = ftell(fd);
-        fseek(fd, 0, SEEK_SET);
-        full_text = (unsigned char *) malloc(size + 1);
-        if (size != fread(full_text, sizeof(unsigned char), size, fd)) {
-            free(full_text);
-            ret = false;
-        } else {
-            fclose(fd);
-            ret = true;
-        }
-    } else {
-        ret = false;
+    printf("Loading file %s\n", filename);
+    if ((full_text = getFullText(filename)) != NULL) {
+        size = strlen((const char *) full_text);
+        printf("size: %d\n", size);
+        return true;
     }
+    printf("failed to load file.\n");
 
-    t.end();
-    printf("load_file %s %d -> %s\n", filename, size, t.toString());
-
-    return ret;
+    return false;
 }
 
 unsigned char **BMH::search(unsigned char *substr)
 {
+    printf("Search for %s\n", substr);
     timer t;
     t.start();
     unsigned int i, sub_size = strlen((char *) substr), start, end, n_found = 0, aux, stringListIndexI;
@@ -59,6 +43,7 @@ unsigned char **BMH::search(unsigned char *substr)
         bad_char_skip[substr[i]] = sub_size - i - 1;
     }
     bad_char_skip[substr[sub_size - 1]] = 1;
+    printf("full text size: %d.\nsub_size: %d\n.", size, sub_size);
 
     for (i = 0; i < size - sub_size && n_found < BMH_LIMIT;) {
         for (j = sub_size - 1; full_text[i + j] == substr[j] && j >= 0; j--);

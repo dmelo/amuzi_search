@@ -23,7 +23,7 @@ static void catch_sigpipe(int signal)
     printf("SIGPIPE thrown");
 }
 
-void con_handler(void *data)
+void conHandler(void *data)
 {
     unsigned char *buffer = (unsigned char *) malloc(256 * sizeof(unsigned char)), **ret;
     int newsockfd = *((int *) data), n;
@@ -39,52 +39,50 @@ void con_handler(void *data)
         error("ERROR on accept");
     }
     bzero(buffer, 256);
-    while (1) {
-        n = recv(newsockfd, buffer, 255, 0);
-        timer t;
-        t.start();
-        printf("read %d bytes.\n", n);
-        if (n < 0) {
-            printf("ERROR reading from socket\n");
-            break;
-        } else if (0 == n) {
-            printf("connection halted.\n");
-            break;
-        } else if (n >= 3) {
-            printf("message: %s\n", buffer);
+    n = recv(newsockfd, buffer, 255, 0);
+    timer t;
+    t.start();
+    printf("read %d bytes.\n", n);
+    if (n < 0) {
+        printf("ERROR reading from socket\n");
+    } else if (0 == n) {
+        printf("connection halted.\n");
+    } else if (n >= 3) {
+        printf("message: %s\n", buffer);
 
-            for (int i = 0; i < strlen((char *) buffer); i++) {
-                if ('\r' == buffer[i] || '\n' == buffer[i]) {
-                    buffer[i] = '\0';
-                    break;
-                }
+        for (int i = 0; i < strlen((char *) buffer); i++) {
+            if ('\r' == buffer[i] || '\n' == buffer[i]) {
+                buffer[i] = '\0';
+                break;
             }
-
-
-            pthread_mutex_lock(&lock);
-            ret = sa->search(buffer);
-            pthread_mutex_unlock(&lock);
-            printf("message: %s\n", buffer);
-            strcpy(response, "");
-            for (int i = 0; i < BMH_LIMIT; i++) {
-                if (NULL != ret[i]) {
-                    strcat(response, (char *) ret[i]);
-                    strcat(response, "\n");
-                }
-            }
-            if (strcmp("", response) == 0) {
-                strcpy(response, "0\n");
-            }
-            send(newsockfd, response, strlen(response), 0);
-            t.end();
-            printf("on con_handler %s\n", t.toString());
-            for (int i = 0; i < BMH_LIMIT; i++) {
-                if (NULL != ret[i]) {
-                    free(ret[i]);
-                }
-            }
-            free(ret);
         }
+
+
+        pthread_mutex_lock(&lock);
+        ret = sa->search(buffer);
+        pthread_mutex_unlock(&lock);
+        printf("message: %s\n", buffer);
+        strcpy(response, "");
+        for (int i = 0; i < BMH_LIMIT; i++) {
+            if (NULL != ret[i]) {
+                strcat(response, (char *) ret[i]);
+                strcat(response, "\n");
+            }
+        }
+        if (strcmp("", response) == 0) {
+            strcpy(response, "0\n");
+        }
+        send(newsockfd, response, strlen(response), 0);
+        t.end();
+        printf("on conHandler %s\n", t.toString());
+        for (int i = 0; i < BMH_LIMIT; i++) {
+            if (NULL != ret[i]) {
+                free(ret[i]);
+            }
+        }
+        free(ret);
+
+        close(newsockfd);
     }
 
     free(buffer);
@@ -105,8 +103,11 @@ int main(int argc, char **argv)
         printf("Usage: amuzi_search {bmh|suffixarray} file port\n");
     } else {
         // Algorithm
-        if (strcmp("bhm", argv[1])) {
+        if (strcmp("bmh", argv[1]) == 0) {
             sa = new BMH();
+        } else {
+            printf("Sorry, that algorithm is not implemented\n");
+            return 2;
         }
 
         // Initialize
@@ -139,7 +140,7 @@ int main(int argc, char **argv)
             newsockfd = (int *) malloc(sizeof(int));
             *newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
             printf("creating socket: %d\n", *newsockfd);
-            pthread_create(&thread, NULL, (void* (*)(void*)) &con_handler, (void *) newsockfd);
+            pthread_create(&thread, NULL, (void* (*)(void*)) &conHandler, (void *) newsockfd);
         }
 
         close(sockfd);
