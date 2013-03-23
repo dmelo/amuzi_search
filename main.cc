@@ -7,6 +7,7 @@
 #include<pthread.h>
 #include<signal.h>
 #include "bmh.h"
+#include "suffixarray.h"
 
 SearchAlg *sa;
 pthread_mutex_t lock;
@@ -105,6 +106,8 @@ int main(int argc, char **argv)
         // Algorithm
         if (strcmp("bmh", argv[1]) == 0) {
             sa = new BMH();
+        } else if (strcmp("suffixarray", argv[1]) == 0) {
+            sa = new SuffixArray();
         } else {
             printf("Sorry, that algorithm is not implemented\n");
             return 2;
