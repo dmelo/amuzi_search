@@ -4,10 +4,11 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<limits.h>
 #include "timer.h"
 #include "searchalg.h"
 
-#define S_PER_FILE 1024
+#define CHUNK_SIZE 1024
 
 class SuffixArray : public SearchAlg {
     public:
@@ -15,11 +16,14 @@ class SuffixArray : public SearchAlg {
         bool loadFile(char *filename);
         unsigned char **search(unsigned char *substr);
     private:
-        unsigned char *full_text;
         unsigned int *array, size;
 
         void swap(unsigned int i, unsigned int j);
-        bool recordPieceFile(unsigned int indexFile[S_PER_FILE]);
+        char *getFilename(unsigned int index);
+        unsigned int writeChunk(unsigned int *indexFile);
+        unsigned int *readChunk(unsigned int index);
+        void removeChunk(unsigned int index);
+        bool mergeChunks(unsigned *iA, unsigned int *iB);
 };
 
 #endif

@@ -3,6 +3,7 @@
 
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 
 class StringNode {
     public:
@@ -15,6 +16,12 @@ class SearchAlg {
         virtual bool loadFile (char *filename) = 0;
         virtual unsigned char **search(unsigned char *substr) = 0;
         unsigned char *getFullText(char *filename);
+        void insertionSort(unsigned int *list, unsigned int size);
+
+    protected:
+        unsigned char *full_text;
+
+
 };
 
 #endif

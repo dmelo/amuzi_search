@@ -24,3 +24,33 @@ unsigned char *SearchAlg::getFullText(char *filename) {
 
     return fullText;
 }
+
+void SearchAlg::insertionSort(unsigned int *list, unsigned int size)
+{
+    unsigned int holePos, valueToInsert, i;
+    for (i = 0; i < 16; i++) {
+        printf(" %u", list[i]);
+    }
+    printf("\n");
+
+    for (i = 1; i < size - 1; i++) {
+        valueToInsert = list[i];
+        holePos = i;
+
+        while(holePos > 0 && 
+            strcmp((char *) &full_text[valueToInsert], 
+                (char *) &full_text[list[holePos - 1]])
+                < 0) {
+            list[holePos] = list[holePos - 1];
+            holePos--;
+        }
+        list[holePos] = valueToInsert;
+    }
+
+    for (i = 0; i < 16; i++) {
+        printf(" %u", list[i]);
+    }
+    printf("\n");
+    printf("\n\n");
+
+}
