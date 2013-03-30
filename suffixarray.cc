@@ -3,21 +3,22 @@
 /**
  * Swap two elements on array.
  */
-void SuffixArray::swap(unsigned int i, unsigned int j)
+void SuffixArray::swap(uint i, uint j)
 {
-    unsigned int aux = array[i];
+    uint aux = array[i];
     array[i] = array[j];
     array[j] = aux;
 }
 
 SuffixArray::SuffixArray()
 {
+    setCmpDebug(false);
 }
 
 /**
  * Calculate the filename for the a given index.
  */
-char *SuffixArray::getFilename(unsigned int index)
+char *SuffixArray::getFilename(uint index)
 {
     char *filename;
 
@@ -31,11 +32,11 @@ char *SuffixArray::getFilename(unsigned int index)
  * Write the chunk file, with uint and return the index used to name the chunk.
  * This methods assumes that indexFile have CHUNK_SIZE uint elements.
  */
-unsigned int SuffixArray::writeChunk(unsigned int *indexFile)
+uint SuffixArray::writeChunk(uint *indexFile)
 {
     FILE *fd;
     char *filename;
-    unsigned int i, ret;
+    uint i, ret;
 
     ret = indexFile[0];
     filename = getFilename(ret);
@@ -54,17 +55,15 @@ unsigned int SuffixArray::writeChunk(unsigned int *indexFile)
     return ret;
 }
 
-unsigned int *SuffixArray::readChunk(unsigned int index)
+uint *SuffixArray::readChunk(uint index)
 {
-    unsigned int *chunk = NULL, aux, i;
+    uint *chunk = NULL, aux, i;
     FILE *fd;
     char *filename;
 
     filename = getFilename(index);
-    printf("try open %s\n", filename);
     if ((fd = fopen(filename, "r")) != NULL) {
-        printf("opened %s\n", filename);
-        chunk = (unsigned int *) malloc(sizeof(unsigned int) * CHUNK_SIZE);
+        chunk = (uint *) malloc(sizeof(uint) * CHUNK_SIZE);
         for (i = 0; i < CHUNK_SIZE && !feof(fd); i++) {
             fscanf(fd, " %u ", &aux);
             chunk[i] = aux;
@@ -76,13 +75,25 @@ unsigned int *SuffixArray::readChunk(unsigned int index)
                 chunk[i] = UINT_MAX;
             }
         }
+    } else {
+        printf("Error: unable to open file %s for reading\n", filename);
     }
+
     free(filename);
 
     return chunk;
 }
 
-void SuffixArray::removeChunk(unsigned int index)
+uint SuffixArray::sortChunk(uint index)
+{
+    uint *chunk = readChunk(index), newIndex;
+
+    quickSort(chunk, CHUNK_SIZE);
+    removeChunk(index);
+    return writeChunk(chunk);
+}
+
+void SuffixArray::removeChunk(uint index)
 {
     char *filename;
 
@@ -91,10 +102,9 @@ void SuffixArray::removeChunk(unsigned int index)
     free(filename);
 }
 
-bool SuffixArray::mergeChunks(unsigned int *iA, unsigned int *iB)
+bool SuffixArray::mergeChunks(uint *iA, uint *iB)
 {
-    printf("merging %u and %u\n", *iA, *iB);
-    unsigned int *chunkA, *chunkB, chunkTmp[CHUNK_SIZE * 2], i;
+    uint *chunkA, *chunkB, i;
     bool ret = false;
 
     chunkA = readChunk(*iA);
@@ -102,7 +112,6 @@ bool SuffixArray::mergeChunks(unsigned int *iA, unsigned int *iB)
 
 
     if (NULL != chunkA && NULL != chunkB) {
-        printf("chunkA and chunkB are not null\n");
         removeChunk(*iA);
         removeChunk(*iB);
 
@@ -111,7 +120,7 @@ bool SuffixArray::mergeChunks(unsigned int *iA, unsigned int *iB)
             chunkTmp[i + CHUNK_SIZE] = chunkB[i];
         }
 
-        insertionSort(chunkTmp, 2 * CHUNK_SIZE);
+        SORT_FUNCTION(chunkTmp, 2 * CHUNK_SIZE);
         *iA = writeChunk(chunkTmp);
         *iB = writeChunk(&chunkTmp[CHUNK_SIZE]);
 
@@ -131,12 +140,12 @@ bool SuffixArray::mergeChunks(unsigned int *iA, unsigned int *iB)
 
 bool SuffixArray::loadFile(char *filename)
 {
-    unsigned int i, j, count, arrayChunk[CHUNK_SIZE], auxA, auxB;
+    uint i, j, count, arrayChunk[CHUNK_SIZE], auxA, auxB, total;
 
     printf("Loading file %s for suffix array.\n", filename);
-    if ((full_text = getFullText(filename)) != NULL) {
+    if (getFullText(filename)) {
         size = strlen((const char *) full_text);
-        array = (unsigned int *) malloc(((size / CHUNK_SIZE) + 1) * sizeof(unsigned int));
+        array = (uint *) malloc(((size / CHUNK_SIZE) + 1) * sizeof(uint));
         count = 0;
         for (i = 0; i < size; i += CHUNK_SIZE) {
             for (j = 0; j < CHUNK_SIZE; j++) {
@@ -146,17 +155,34 @@ bool SuffixArray::loadFile(char *filename)
             count++;
         }
 
+        timer t;
+        total = 0;
+        t.start();
+        if (PRESORT_CHUNKS) {
+            printf("start presoring chunks\n");
+            for (i = 0; i < count; i++) {
+                array[i] = sortChunk(array[i]);
+            }
+            printf("chunks presorted\n");
+        }
+
         for (i = 0; i < count - 1; i++) {
             for (j = 0; j < count - 1 - i; j++) {
-                auxA = j;
-                auxB = j + 1;
+                total++;
+                auxA = array[j];
+                auxB = array[j + 1];
                 mergeChunks(&auxA, &auxB);
+                array[j] = auxA;
+                array[j + 1] = auxB;
+
             }
         }
+        t.end();
+        printf("merge %u chunks %s\n", total, t.toString());
     }
 }
 
-unsigned char **SuffixArray::search(unsigned char *substr)
+uchar **SuffixArray::search(uchar *substr)
 {
     // TODO: search for substr on the suffix array.
 }

@@ -8,22 +8,25 @@
 #include "timer.h"
 #include "searchalg.h"
 
-#define CHUNK_SIZE 1024
+#define CHUNK_SIZE 8192
+#define SORT_FUNCTION quickSort
+#define PRESORT_CHUNKS 1
 
 class SuffixArray : public SearchAlg {
     public:
         SuffixArray();
         bool loadFile(char *filename);
-        unsigned char **search(unsigned char *substr);
+        uchar **search(uchar *substr);
     private:
-        unsigned int *array, size;
+        uint *array, size, chunkTmp[CHUNK_SIZE * 2];
 
-        void swap(unsigned int i, unsigned int j);
-        char *getFilename(unsigned int index);
-        unsigned int writeChunk(unsigned int *indexFile);
-        unsigned int *readChunk(unsigned int index);
-        void removeChunk(unsigned int index);
-        bool mergeChunks(unsigned *iA, unsigned int *iB);
+        void swap(uint i, uint j);
+        char *getFilename(uint index);
+        uint writeChunk(uint *indexFile);
+        uint *readChunk(uint index);
+        uint sortChunk(uint index);
+        void removeChunk(uint index);
+        bool mergeChunks(uint *iA, uint *iB);
 };
 
 #endif

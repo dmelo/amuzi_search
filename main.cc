@@ -8,6 +8,7 @@
 #include<signal.h>
 #include "bmh.h"
 #include "suffixarray.h"
+#include "testsort.h"
 
 SearchAlg *sa;
 pthread_mutex_t lock;
@@ -100,9 +101,17 @@ int main(int argc, char **argv)
     struct sockaddr_in serv_addr, cli_addr;
 
 
-    if (4 != argc) {
+    printf("aa\n");
+    printf("%d\n", argc);
+    if (1 == argc) {
         printf("Usage: amuzi_search {bmh|suffixarray} file port\n");
-    } else {
+    } else if (2 == argc) {
+        TestSort *testSort = new TestSort();
+        if (strcmp(argv[1], "test_sort_algs") == 0) {
+            printf("test_sort_algs\n");
+            testSort->testAlgs();
+        }
+    } else if (4 == argc){
         // Algorithm
         if (strcmp("bmh", argv[1]) == 0) {
             sa = new BMH();

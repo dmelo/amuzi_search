@@ -3,3 +3,4 @@ amuzi_search
 *.log
 *.o
 data/*
+data_*

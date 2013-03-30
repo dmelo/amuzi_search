@@ -1,56 +1,154 @@
 #include"searchalg.h"
 
-unsigned char *SearchAlg::getFullText(char *filename) {
+bool SearchAlg::getFullText(char *filename) {
     FILE *fd;
-    unsigned char *fullText;
     int size, fread_ret;
 
     if ((fd = fopen(filename, "rb")) != NULL) {
         fseek(fd, 0, SEEK_END);
         size = ftell(fd);
         fseek(fd, 0, SEEK_SET);
-        fullText = (unsigned char *) malloc(size + 1);
-        if (size != (fread_ret = fread(fullText, sizeof(unsigned char), size, fd))) {
+        full_text = (uchar *) malloc(size + 1);
+        if (size != (fread_ret = fread(full_text, sizeof(uchar), size, fd))) {
             printf("fread returned %d while %d was expected.\n", fread_ret, size);
-            free(fullText);
-            fullText = NULL;
+            free(full_text);
+            full_text = NULL;
         } else {
             fclose(fd);
         }
+        return true;
     } else {
         printf("fopen returned NULL.\n");
-        fullText = NULL;
+        full_text = NULL;
+        return false;
     }
-
-    return fullText;
 }
 
-void SearchAlg::insertionSort(unsigned int *list, unsigned int size)
+void SearchAlg::insertionSort(uint *list, uint size)
 {
-    unsigned int holePos, valueToInsert, i;
-    for (i = 0; i < 16; i++) {
-        printf(" %u", list[i]);
-    }
-    printf("\n");
+    uint holePos, valueToInsert, i;
 
-    for (i = 1; i < size - 1; i++) {
+    for (i = 1; i < size; i++) {
         valueToInsert = list[i];
         holePos = i;
 
         while(holePos > 0 && 
-            strcmp((char *) &full_text[valueToInsert], 
-                (char *) &full_text[list[holePos - 1]])
-                < 0) {
+            cmp(valueToInsert, list[holePos - 1]) < 0
+        ) {
             list[holePos] = list[holePos - 1];
             holePos--;
         }
         list[holePos] = valueToInsert;
     }
+}
 
-    for (i = 0; i < 16; i++) {
-        printf(" %u", list[i]);
+uint SearchAlg::quickSortPartition(uint *list, uint l, uint r)
+{
+    uint pivotIndex = (l + r) / 2,
+         pivotValue = list[pivotIndex],
+         aux, i,
+         storeIndex = l;
+
+    aux = list[pivotIndex];
+    list[pivotIndex] = list[r];
+    list[r] = aux;
+
+    for (i = l; i < r; i++) {
+        if (cmp(list[i], pivotValue) < 0) {
+            aux = list[storeIndex];
+            list[storeIndex] = list[i];
+            list[i] = aux;
+            storeIndex++;
+        }
     }
-    printf("\n");
-    printf("\n\n");
 
+    aux = list[storeIndex];
+    list[storeIndex] = list[r];
+    list[r] = aux;
+
+    return storeIndex;
+}
+
+void SearchAlg::quickSortInternal(uint *list, uint l, uint r)
+{
+    uint j;
+    if (l < r) {
+        j = quickSortPartition(list, l, r);
+        if (l < j) {
+            quickSortInternal(list, l, j - 1);
+        }
+
+        if (j < r) {
+            quickSortInternal(list, j + 1, r);
+        }
+    }
+}
+
+void SearchAlg::quickSort(uint *list, uint size)
+{
+    quickSortInternal(list, 0, size - 1);
+}
+
+void SearchAlg::mergeSort(uint *list, uint size)
+{
+    uint listAux[size], iA = 0, iB = 0, count = 0, size_2 = size / 2, i;
+
+    while (iA < size_2 || iB < size_2) {
+        if (iA < size_2 && iB < size_2) {
+            if (cmp(list[iA], list[iB + size_2]) < 0) {
+                listAux[count] = list[iA];
+                iA++;
+            } else {
+                listAux[count] = list[iB + size_2];
+                iB++;
+            }
+        } else if (iA < size_2) {
+            listAux[count] = list[iA];
+            iA++;
+        } else if (iB < size_2) {
+            listAux[count] = list[iB + size_2];
+            iB++;
+        }
+
+        count++;
+    }
+
+    for (i = 0; i < size; i++) {
+        list[i] = listAux[i];
+    }
+}
+
+void SearchAlg::bfSort(uint *list, uint size)
+{
+    uint i, j, aux;
+
+    for (i = 0; i < size; i++) {
+        for (j = i + 1; j < size; j++) {
+            if (cmp(list[i], list[j]) > 0) {
+                aux = list[i];
+                list[i] = list[j];
+                list[j] = aux;
+            }
+        }
+    }
+}
+
+int SearchAlg::cmp(uint a, uint b)
+{
+    if (cmpDebug) {
+        if (a < b) {
+            return -1;
+        } else if (a == b) {
+            return 0;
+        } else {
+            return 1;
+        }
+    } else {
+        return strcmp((char *) &full_text[a], (char *) &full_text[b]);
+    }
+}
+
+void SearchAlg::setCmpDebug(bool cmpDebug)
+{
+    this->cmpDebug = cmpDebug;
 }

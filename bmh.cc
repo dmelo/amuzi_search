@@ -13,7 +13,7 @@ BMH::BMH()
 bool BMH::loadFile(char *filename)
 {
     printf("Loading file %s\n", filename);
-    if ((full_text = getFullText(filename)) != NULL) {
+    if (getFullText(filename)) {
         size = strlen((const char *) full_text);
         printf("size: %d\n", size);
         return true;
