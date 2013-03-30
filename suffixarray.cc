@@ -172,9 +172,9 @@ bool SuffixArray::loadFile(char *filename)
     FILE *fd;
 
     printf("Loading file %s for suffix array.\n", filename);
+    fflush(stdout);
     if (getFullText(filename)) {
         // Allocate memory for suffix array.
-        size = strlen((const char *) full_text);
         array = (uint *) malloc(((size / CHUNK_SIZE) + 1) * sizeof(uint));
         timer t, t2;
 
@@ -192,10 +192,12 @@ bool SuffixArray::loadFile(char *filename)
             t.start();
             if (PRESORT_CHUNKS) {
                 printf("start presoring chunks\n");
+                fflush(stdout);
                 for (i = 0; i < count; i++) {
                     array[i] = sortChunk(array[i]);
                 }
                 printf("chunks presorted\n");
+                fflush(stdout);
             }
             
             i = 0;
@@ -219,10 +221,109 @@ bool SuffixArray::loadFile(char *filename)
 
         t.end();
         printf("merge %u chunks %s\n", total, t.toString());
+        fflush(stdout);
+        fflush(stderr);
     }
+}
+
+/**
+ * Test if pattern matches full_text on index position.
+ *
+ * @param uint index full_text index to be tested.
+ * @param char *substr pattern to be found.
+ *
+ * @return bool Return true if patter matches, false otherwise.
+ */
+bool SuffixArray::matchFound(uint index, uchar *substr)
+{
+    uint len = strlen((const char *) substr), i;
+
+    if (UINT_MAX == index) {
+        return false;
+    }
+
+    for (i = 0; i < len; i++) {
+        if (full_text[index + i] != substr[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void SuffixArray::pick(uint index)
+{
+    char p[15];
+    uint i;
+    for (i = 0; i < 14; i++) {
+        p[i] = (char) full_text[index + i];
+    }
+    p[14] = '\0';
+
+    printf("pick: %u -- %s\n", index, p);
+}
+
+uint SuffixArray::binarySearch(uint *list, uint l, uint r, uchar *substr)
+{
+    uint index = (l + r) / 2, ret;
+
+    pick(list[index]);
+
+    printf("binarySearch: %u %u\n", l, r);
+
+    if (l == r || matchFound(list[index], substr)) {
+        ret = index;
+    } else {
+        if (UINT_MAX == list[index] || strcmp(
+            (char *) substr,
+            (char *) &full_text[list[index]]
+        ) < 0) {
+            ret = binarySearch(list, l, index, substr);
+        } else {
+            if (index == l) {
+                ret = binarySearch(list, index, r - 1, substr);
+            } else {
+                ret = binarySearch(list, index, r, substr);
+            }
+        }
+    }
+
+    return ret;
 }
 
 uchar **SuffixArray::search(uchar *substr)
 {
-    // TODO: search for substr on the suffix array.
+    uchar **ret = (uchar **) calloc(SEARCH_LIMIT, sizeof(uchar *));
+    timer t;
+    t.start();
+    printf("searching %s\n", (char *) substr);
+    uint arraySize, index, i;
+
+    arraySize = (size / CHUNK_SIZE) + 1;
+
+    index = binarySearch(array, 0, arraySize - 1, substr);
+    readChunk(array[index], 0);
+
+    index = binarySearch(chunkA, 0, CHUNK_SIZE - 1, substr);
+    pick(chunkA[index]);
+
+    while (index > 0 && matchFound(chunkA[index], substr)) {
+        index--;
+    }
+    index++;
+
+    for (i = 0; i < SEARCH_LIMIT && index + i < CHUNK_SIZE &&
+        matchFound(chunkA[index + i], substr); i++) {
+        ret[i] = getResult(chunkA[index + i]);
+    }
+
+    for (; i < SEARCH_LIMIT; i++) {
+        ret[i] = NULL;
+    }
+
+    t.end();
+    printf("--- TIME %s\n", t.toString());
+
+
+    return ret;
 }

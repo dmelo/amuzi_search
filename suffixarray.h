@@ -17,7 +17,7 @@ class SuffixArray : public SearchAlg {
         bool loadFile(char *filename);
         uchar **search(uchar *substr);
     private:
-        uint *array, size, chunkTmp[CHUNK_SIZE * 2], chunkA[CHUNK_SIZE],
+        uint *array, chunkTmp[CHUNK_SIZE * 2], chunkA[CHUNK_SIZE],
              chunkB[CHUNK_SIZE];
 
         void swap(uint i, uint j);
@@ -30,6 +30,11 @@ class SuffixArray : public SearchAlg {
 
         bool loadState(uint *i, uint *count);
         bool saveState(uint i, uint count, uint total);
+
+        bool matchFound(uint index, uchar *substr);
+        uint binarySearch(uint *list, uint l, uint r, uchar *substr);
+
+        void pick(uint index);
 };
 
 #endif

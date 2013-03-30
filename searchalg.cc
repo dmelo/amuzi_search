@@ -2,7 +2,7 @@
 
 bool SearchAlg::getFullText(char *filename) {
     FILE *fd;
-    int size, fread_ret;
+    int fread_ret;
 
     if ((fd = fopen(filename, "rb")) != NULL) {
         fseek(fd, 0, SEEK_END);
@@ -157,4 +157,21 @@ int SearchAlg::cmp(uint a, uint b)
 void SearchAlg::setCmpDebug(bool cmpDebug)
 {
     this->cmpDebug = cmpDebug;
+}
+
+uchar *SearchAlg::getResult(uint i)
+{
+    uint start, end, j;
+    uchar *ret = NULL;
+
+    for(start = i; '\n' != full_text[start] && start >= 0; start--);
+    start++;
+    for(end = i; '\n' != full_text[end] && end < size; end++);
+    ret = (uchar *) malloc((end - start + 1) * sizeof(uchar));
+    for (j = 0; j < end - start; j++) {
+        ret[j] = full_text[start + j];
+    }
+    ret[j] = '\0';
+
+    return ret;
 }

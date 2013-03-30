@@ -29,7 +29,7 @@ unsigned char **BMH::search(unsigned char *substr)
     timer t;
     t.start();
     unsigned int i, sub_size = strlen((char *) substr), start, end, n_found = 0, aux, stringListIndexI;
-    unsigned char **ret = (unsigned char **) calloc(BMH_LIMIT, sizeof(unsigned char *));
+    unsigned char **ret = (unsigned char **) calloc(SEARCH_LIMIT, sizeof(unsigned char *));
     int j;
 
     memset(stringList, 0, MAX_STRING_MAX_LENGTH * sizeof(StringNode*));
@@ -45,17 +45,10 @@ unsigned char **BMH::search(unsigned char *substr)
     bad_char_skip[substr[sub_size - 1]] = 1;
     printf("full text size: %d.\nsub_size: %d\n.", size, sub_size);
 
-    for (i = 0; i < size - sub_size && n_found < BMH_LIMIT;) {
+    for (i = 0; i < size - sub_size && n_found < SEARCH_LIMIT;) {
         for (j = sub_size - 1; full_text[i + j] == substr[j] && j >= 0; j--);
         if (-1 == j) { // We have a match.
-            for(start = i; '\n' != full_text[start] && start >= 0; start--);
-            start++;
-            for(end = i; '\n' != full_text[end] && end < size; end++);
-            ret[n_found] = (unsigned char *) malloc((end - start + 1) * sizeof(unsigned char));
-            for (j = 0; j < end - start; j++) {
-                ret[n_found][j] = full_text[start + j];
-            }
-            ret[n_found][j] = '\0';
+            ret[n_found] = getResult(i);
             n_found++;
             i++;
         }
@@ -66,7 +59,7 @@ unsigned char **BMH::search(unsigned char *substr)
     t2.start();
     if (n_found > 0) {
         stringListIndexI = 0;
-        memset(stringListIndex, 0, BMH_LIMIT * sizeof(StringNode *));
+        memset(stringListIndex, 0, SEARCH_LIMIT * sizeof(StringNode *));
         for (i = 0; i < n_found; i++) {
             aux = strlen((char *) ret[i]);
             snode = new StringNode();
@@ -85,7 +78,7 @@ unsigned char **BMH::search(unsigned char *substr)
             }
         }
 
-        memset(ret, 0, BMH_LIMIT * sizeof(unsigned char *));
+        memset(ret, 0, SEARCH_LIMIT * sizeof(unsigned char *));
         n_found = 0;
         for (i = 0; i < MAX_STRING_MAX_LENGTH; i++) {
             if (NULL != stringList[i]) {
@@ -107,7 +100,7 @@ unsigned char **BMH::search(unsigned char *substr)
     printf("sorting %d strings -> %s\n", n_found, t2.toString());
 
     t.end();
-    printf("search %s %u -> %s\n", substr, BMH_LIMIT, t.toString());
+    printf("search %s %u -> %s\n", substr, SEARCH_LIMIT, t.toString());
 
     return ret;
 }

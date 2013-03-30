@@ -23,10 +23,12 @@ class SearchAlg {
         void quickSort(uint *list, uint size);
         void mergeSort(uint *list, uint size);
         void bfSort(uint *list, uint size);
+        uchar *getResult(uint index);
 
     protected:
         uchar *full_text;
         bool cmpDebug;
+        uint size;
 
         void quickSortInternal(uint *list, uint l, uint r);
         uint quickSortPartition(uint *list, uint l, uint r);

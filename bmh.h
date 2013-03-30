@@ -8,7 +8,6 @@
 #include "timer.h"
 #include "searchalg.h"
 
-#define BMH_LIMIT 1000
 #define MAX_STRING_MAX_LENGTH 4096
 
 class BMH : public SearchAlg {
@@ -21,7 +20,7 @@ class BMH : public SearchAlg {
         unsigned char *full_text, bad_char_skip[UCHAR_MAX + 1];
         unsigned int size;
         StringNode *stringList[MAX_STRING_MAX_LENGTH], *snode, *snodeAux,
-                   *stringListIndex[BMH_LIMIT];
+                   *stringListIndex[SEARCH_LIMIT];
 };
 
 

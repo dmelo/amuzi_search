@@ -65,7 +65,7 @@ void conHandler(void *data)
         pthread_mutex_unlock(&lock);
         printf("message: %s\n", buffer);
         strcpy(response, "");
-        for (int i = 0; i < BMH_LIMIT; i++) {
+        for (int i = 0; i < SEARCH_LIMIT; i++) {
             if (NULL != ret[i]) {
                 strcat(response, (char *) ret[i]);
                 strcat(response, "\n");
@@ -77,7 +77,7 @@ void conHandler(void *data)
         send(newsockfd, response, strlen(response), 0);
         t.end();
         printf("on conHandler %s\n", t.toString());
-        for (int i = 0; i < BMH_LIMIT; i++) {
+        for (int i = 0; i < SEARCH_LIMIT; i++) {
             if (NULL != ret[i]) {
                 free(ret[i]);
             }
