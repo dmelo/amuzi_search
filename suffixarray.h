@@ -8,7 +8,6 @@
 #include "timer.h"
 #include "searchalg.h"
 
-#define CHUNK_SIZE 8192
 #define SORT_FUNCTION mergeSort
 #define PRESORT_CHUNKS 1
 

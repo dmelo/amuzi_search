@@ -1,5 +1,6 @@
 .*.swp
 amuzi_search
+catuint
 *.log
 *.o
 data/*

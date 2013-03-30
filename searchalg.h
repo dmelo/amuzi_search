@@ -5,9 +5,8 @@
 #include<stdlib.h>
 #include<string.h>
 #include<limits.h>
-
-typedef unsigned int uint;
-typedef unsigned char uchar;
+#include"searchalg.h"
+#include"defs.h"
 
 class StringNode {
     public:
