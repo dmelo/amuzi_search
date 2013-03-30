@@ -8,7 +8,7 @@ bool SearchAlg::getFullText(char *filename) {
         fseek(fd, 0, SEEK_END);
         size = ftell(fd);
         fseek(fd, 0, SEEK_SET);
-        full_text = (uchar *) malloc(size + 1);
+        full_text = (uchar *) malloc((size + 1) * sizeof(uchar));
         if (size != (fread_ret = fread(full_text, sizeof(uchar), size, fd))) {
             printf("fread returned %d while %d was expected.\n", fread_ret, size);
             free(full_text);
@@ -144,7 +144,13 @@ int SearchAlg::cmp(uint a, uint b)
             return 1;
         }
     } else {
-        return strcmp((char *) &full_text[a], (char *) &full_text[b]);
+        if (UINT_MAX == a) {
+            return 1;
+        } else if (UINT_MAX == b) {
+            return -1;
+        } else {
+            return strcmp((char *) &full_text[a], (char *) &full_text[b]);
+        }
     }
 }
 

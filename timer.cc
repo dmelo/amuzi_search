@@ -10,8 +10,9 @@ void timer::restart() {
 
 bool timer::start() {
     gettimeofday(&st, &tz);
-     if(ended)
-	return false;
+    if(ended) {
+        return false;
+    }
     started = true;
 
     return true;

@@ -18,11 +18,8 @@ SuffixArray::SuffixArray()
 /**
  * Calculate the filename for the a given index.
  */
-char *SuffixArray::getFilename(uint index)
+char *SuffixArray::getFilename(uint index, char *filename)
 {
-    char *filename;
-
-    filename = (char *) malloc(1024 * sizeof(char));
     sprintf(filename, "data/%u.array", index);
 
     return filename;
@@ -35,90 +32,73 @@ char *SuffixArray::getFilename(uint index)
 uint SuffixArray::writeChunk(uint *indexFile)
 {
     FILE *fd;
-    char *filename;
+    char filename[1024];
     uint i, ret;
 
     ret = indexFile[0];
-    filename = getFilename(ret);
-    if ((fd = fopen(filename, "w")) != NULL) {
-        for (i = 0; i < CHUNK_SIZE && indexFile[i] != UINT_MAX; i++) {
-            fprintf(fd, "%u\n", indexFile[i]);
-        }
+    getFilename(ret, filename);
 
+    if ((fd = fopen(filename, "wb")) != NULL) {
+        fwrite(indexFile, CHUNK_SIZE, sizeof(uint), fd);
         fclose(fd);
     } else {
         ret = UINT_MAX;
     }
 
-    free(filename);
-    
     return ret;
 }
 
-uint *SuffixArray::readChunk(uint index)
+void SuffixArray::readChunk(uint index, uint varIndex)
 {
     uint *chunk = NULL, aux, i;
     FILE *fd;
-    char *filename;
+    char filename[1024];
 
-    filename = getFilename(index);
-    if ((fd = fopen(filename, "r")) != NULL) {
-        chunk = (uint *) malloc(sizeof(uint) * CHUNK_SIZE);
-        for (i = 0; i < CHUNK_SIZE && !feof(fd); i++) {
-            fscanf(fd, " %u ", &aux);
-            chunk[i] = aux;
+    getFilename(index, filename);
+    if ((fd = fopen(filename, "rb")) != NULL) {
+        if (0 == varIndex) {
+            fread(chunkA, CHUNK_SIZE, sizeof(uint), fd);
+        } else {
+            fread(chunkB, CHUNK_SIZE, sizeof(uint), fd);
         }
         fclose(fd);
-
-        if (i < CHUNK_SIZE) { // chunk is not complete, may be the last chunk.
-            for (; i < CHUNK_SIZE; i++) {
-                chunk[i] = UINT_MAX;
-            }
-        }
     } else {
         printf("Error: unable to open file %s for reading\n", filename);
     }
-
-    free(filename);
-
-    return chunk;
 }
 
 uint SuffixArray::sortChunk(uint index)
 {
-    uint *chunk = readChunk(index), newIndex;
-
-    quickSort(chunk, CHUNK_SIZE);
+    readChunk(index, 0);
+    quickSort(chunkA, CHUNK_SIZE);
     removeChunk(index);
-    return writeChunk(chunk);
+
+    return writeChunk(chunkA);
 }
 
 void SuffixArray::removeChunk(uint index)
 {
-    char *filename;
+    char filename[1024];
 
-    filename = getFilename(index);
+    getFilename(index, filename);
     remove(filename);
-    free(filename);
 }
 
 bool SuffixArray::mergeChunks(uint *iA, uint *iB)
 {
-    uint *chunkA, *chunkB, i;
+    uint i;
     bool ret = false;
 
-    chunkA = readChunk(*iA);
-    chunkB = readChunk(*iB);
+    readChunk(*iA, 0);
+    readChunk(*iB, 1);
 
 
     if (NULL != chunkA && NULL != chunkB) {
         removeChunk(*iA);
         removeChunk(*iB);
 
-        for (i = 0; i < CHUNK_SIZE; i++) {
-            chunkTmp[i] = chunkA[i];
-            chunkTmp[i + CHUNK_SIZE] = chunkB[i];
-        }
+        memcpy(chunkTmp, chunkA, CHUNK_SIZE * sizeof(uint));
+        memcpy(&chunkTmp[CHUNK_SIZE], chunkB, CHUNK_SIZE * sizeof(uint));
 
         SORT_FUNCTION(chunkTmp, 2 * CHUNK_SIZE);
         *iA = writeChunk(chunkTmp);
@@ -138,45 +118,105 @@ bool SuffixArray::mergeChunks(uint *iA, uint *iB)
     return ret;
 }
 
+bool SuffixArray::saveState(uint i, uint count, uint total)
+{
+    FILE *fd;
+    uint a;
+    bool ret;
+
+    if ((fd = fopen("data/info.txt", "w")) != NULL) {
+        fprintf(fd, "%u %u\n", i, count);
+        for (a = 0; a < count; a++) {
+            fprintf(fd, "%u\n", array[a]);
+        }
+        fclose(fd);
+        printf("completed %u of %u\n", total, count * count / 2);
+        ret = true;
+    } else {
+        ret = false;
+    }
+
+    return ret;
+}
+
+bool SuffixArray::loadState(uint *i, uint *count)
+{
+    FILE *fd;
+    uint a;
+    bool ret;
+
+    if ((fd = fopen("data/info.txt", "r")) != NULL) {
+        fscanf(fd, " %u %u ", i, count);
+        for (a = 0; a < *count; a++) {
+            fscanf(fd, " %u ", &array[a]);
+        }
+        fclose(fd);
+        ret = true;
+        printf("loadState %u %u\narray: ", *i, *count);
+        for (a = 0; a < *count; a++) {
+            printf("%u ", array[a]);
+        }
+        printf("\n");
+        ret = true;
+    } else {
+        ret = false;
+    }
+
+    printf("loadState returned %s\n", ret ? "true" : "false");
+    return ret;
+}
+
 bool SuffixArray::loadFile(char *filename)
 {
-    uint i, j, count, arrayChunk[CHUNK_SIZE], auxA, auxB, total;
+    uint i, j, k, count, auxA, auxB, total;
+    FILE *fd;
 
     printf("Loading file %s for suffix array.\n", filename);
     if (getFullText(filename)) {
+        // Allocate memory for suffix array.
         size = strlen((const char *) full_text);
         array = (uint *) malloc(((size / CHUNK_SIZE) + 1) * sizeof(uint));
-        count = 0;
-        for (i = 0; i < size; i += CHUNK_SIZE) {
-            for (j = 0; j < CHUNK_SIZE; j++) {
-                arrayChunk[j] = i + j;
+        timer t, t2;
+
+        if (!loadState(&i, &count)) {
+            count = 0;
+            for (i = 0; i < size; i += CHUNK_SIZE) {
+                for (j = 0; j < CHUNK_SIZE; j++) {
+                    chunkA[j] = i + j < size ? i + j : UINT_MAX;
+                }
+                array[count] = writeChunk(chunkA);
+                count++;
             }
-            array[count] = writeChunk(arrayChunk);
-            count++;
+
+            total = 0;
+            t.start();
+            if (PRESORT_CHUNKS) {
+                printf("start presoring chunks\n");
+                for (i = 0; i < count; i++) {
+                    array[i] = sortChunk(array[i]);
+                }
+                printf("chunks presorted\n");
+            }
+            
+            i = 0;
         }
 
-        timer t;
-        total = 0;
-        t.start();
-        if (PRESORT_CHUNKS) {
-            printf("start presoring chunks\n");
-            for (i = 0; i < count; i++) {
-                array[i] = sortChunk(array[i]);
-            }
-            printf("chunks presorted\n");
-        }
-
-        for (i = 0; i < count - 1; i++) {
-            for (j = 0; j < count - 1 - i; j++) {
+        for (i; i < count - 1; i++) {
+            t2.start();
+            for (j = i + 1; j < count; j++) {
                 total++;
-                auxA = array[j];
-                auxB = array[j + 1];
+                auxA = array[i];
+                auxB = array[j];
                 mergeChunks(&auxA, &auxB);
-                array[j] = auxA;
-                array[j + 1] = auxB;
+                array[i] = auxA;
+                array[j] = auxB;
 
             }
+            t2.end();
+
+            saveState(i + 1, count, total);
         }
+
         t.end();
         printf("merge %u chunks %s\n", total, t.toString());
     }
