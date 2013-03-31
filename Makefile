@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-g -O3
+CXXFLAGS=-g -Ofast -march=native
 
 all: amuzi_search catuint
 
@@ -7,7 +7,7 @@ clean:
 	rm *.o amuzi_search catuint
 
 amuzi_search: timer.o bmh.o suffixarray.o testsort.o main.cc
-	g++ -O3 -g timer.o bmh.o suffixarray.o testsort.o searchalg.o main.cc -o amuzi_search -lpthread
+	$(CXX) $(CXXFLAGS) timer.o bmh.o suffixarray.o testsort.o searchalg.o main.cc -o amuzi_search -lpthread
 
 searchalg.o: searchalg.cc searchalg.h defs.h
 	$(CXX) $(CXXFLAGS) -c searchalg.cc -o searchalg.o

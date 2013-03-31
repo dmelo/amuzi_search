@@ -176,7 +176,7 @@ bool SuffixArray::loadFile(char *filename)
     if (getFullText(filename)) {
         // Allocate memory for suffix array.
         array = (uint *) malloc(((size / CHUNK_SIZE) + 1) * sizeof(uint));
-        timer t, t2;
+        timer t;
 
         if (!loadState(&i, &count)) {
             count = 0;
@@ -204,6 +204,9 @@ bool SuffixArray::loadFile(char *filename)
         }
 
         for (i; i < count - 1; i++) {
+            timer t2;
+            uint total0 = total;
+
             t2.start();
             for (j = i + 1; j < count; j++) {
                 total++;
@@ -217,10 +220,11 @@ bool SuffixArray::loadFile(char *filename)
             t2.end();
 
             saveState(i + 1, count, total);
+            printf("%u merges in %s\n", total - total0, t2.toString());
         }
 
         t.end();
-        printf("merge %u chunks %s\n", total, t.toString());
+        printf("merge %u chunks %s\n\n", total, t.toString());
         fflush(stdout);
         fflush(stderr);
     }
