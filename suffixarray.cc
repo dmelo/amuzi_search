@@ -12,6 +12,7 @@ void SuffixArray::swap(uint i, uint j)
 
 SuffixArray::SuffixArray()
 {
+    lock = PTHREAD_MUTEX_INITIALIZER;
     setCmpDebug(false);
 }
 
@@ -48,7 +49,7 @@ uint SuffixArray::writeChunk(uint *indexFile)
     return ret;
 }
 
-void SuffixArray::readChunk(uint index, uint varIndex)
+void SuffixArray::readChunk(uint index, uint varIndex, uint tid)
 {
     uint *chunk = NULL, aux, i;
     FILE *fd;
@@ -57,9 +58,9 @@ void SuffixArray::readChunk(uint index, uint varIndex)
     getFilename(index, filename);
     if ((fd = fopen(filename, "rb")) != NULL) {
         if (0 == varIndex) {
-            fread(chunkA, CHUNK_SIZE, sizeof(uint), fd);
+            fread(chunkA[tid], CHUNK_SIZE, sizeof(uint), fd);
         } else {
-            fread(chunkB, CHUNK_SIZE, sizeof(uint), fd);
+            fread(chunkB[tid], CHUNK_SIZE, sizeof(uint), fd);
         }
         fclose(fd);
     } else {
@@ -69,11 +70,11 @@ void SuffixArray::readChunk(uint index, uint varIndex)
 
 uint SuffixArray::sortChunk(uint index)
 {
-    readChunk(index, 0);
-    quickSort(chunkA, CHUNK_SIZE);
+    readChunk(index, 0, 0);
+    quickSort(chunkA[0], CHUNK_SIZE);
     removeChunk(index);
 
-    return writeChunk(chunkA);
+    return writeChunk(chunkA[0]);
 }
 
 void SuffixArray::removeChunk(uint index)
@@ -84,38 +85,30 @@ void SuffixArray::removeChunk(uint index)
     remove(filename);
 }
 
-bool SuffixArray::mergeChunks(uint *iA, uint *iB)
+bool SuffixArray::mergeChunks(uint *iA, uint *iB, uint tid)
 {
     uint i;
     bool ret = false;
 
-    readChunk(*iA, 0);
-    readChunk(*iB, 1);
+    readChunk(*iA, 0, tid);
+    readChunk(*iB, 1, tid);
 
 
-    if (NULL != chunkA && NULL != chunkB) {
-        removeChunk(*iA);
-        removeChunk(*iB);
+    removeChunk(*iA);
+    removeChunk(*iB);
 
-        memcpy(chunkTmp, chunkA, CHUNK_SIZE * sizeof(uint));
-        memcpy(&chunkTmp[CHUNK_SIZE], chunkB, CHUNK_SIZE * sizeof(uint));
+    memcpy(chunkTmp[tid], chunkA[tid], CHUNK_SIZE * sizeof(uint));
+    memcpy(&(chunkTmp[tid][CHUNK_SIZE]), chunkB[tid], CHUNK_SIZE * sizeof(uint));
 
-        SORT_FUNCTION(chunkTmp, 2 * CHUNK_SIZE);
-        *iA = writeChunk(chunkTmp);
-        *iB = writeChunk(&chunkTmp[CHUNK_SIZE]);
+    SORT_FUNCTION(chunkTmp[tid], 2 * CHUNK_SIZE);
+    *iA = writeChunk(chunkTmp[tid]);
+    *iB = writeChunk(&(chunkTmp[tid][CHUNK_SIZE]));
 
-        ret = true;
-    } else {
-        if (NULL == chunkA) {
-            printf("chunkA is null\n");
-        }
-        if (NULL == chunkB) {
-            printf("chunkB is null\n");
-        }
+    //pthread_mutex_lock(&lock);
+    total++;
+    //pthread_mutex_unlock(&lock);
 
-    }
-
-    return ret;
+    return true;
 }
 
 bool SuffixArray::saveState(uint i, uint count, uint total)
@@ -166,10 +159,25 @@ bool SuffixArray::loadState(uint *i, uint *count)
     return ret;
 }
 
+void SuffixArray::workerMerge(void *ptr)
+{
+    ThreadType *t = (ThreadType *) ptr;
+    uint auxA, auxB, i = t->i, j, tid = t->tid;
+
+    for (j = i + 2; j < t->obj->count; j += 2) {
+        auxA = t->obj->array[i];
+        auxB = t->obj->array[j];
+        t->obj->mergeChunks(&auxA, &auxB, tid);
+        t->obj->array[i] = auxA;
+        t->obj->array[j] = auxB;
+    }
+}
+
 bool SuffixArray::loadFile(char *filename)
 {
-    uint i, j, k, count, auxA, auxB, total;
+    uint i, j, k, auxA, auxB;
     FILE *fd;
+    pthread_t t0, t1;
 
     printf("Loading file %s for suffix array.\n", filename);
     fflush(stdout);
@@ -182,9 +190,9 @@ bool SuffixArray::loadFile(char *filename)
             count = 0;
             for (i = 0; i < size; i += CHUNK_SIZE) {
                 for (j = 0; j < CHUNK_SIZE; j++) {
-                    chunkA[j] = i + j < size ? i + j : UINT_MAX;
+                    chunkA[0][j] = i + j < size ? i + j : UINT_MAX;
                 }
-                array[count] = writeChunk(chunkA);
+                array[count] = writeChunk(chunkA[0]);
                 count++;
             }
 
@@ -203,20 +211,32 @@ bool SuffixArray::loadFile(char *filename)
             i = 0;
         }
 
-        for (i; i < count - 1; i++) {
+        for (i; i < count - 1; i += 2) {
             timer t2;
             uint total0 = total;
+            ThreadType ta0, ta1;
+
+            ta0.obj = this;
+            ta0.i = i;
+            ta0.tid = 0;
+
+            ta1.obj = this;
+            ta1.i = i + 1;
+            ta1.tid = 1;
 
             t2.start();
-            for (j = i + 1; j < count; j++) {
-                total++;
-                auxA = array[i];
-                auxB = array[j];
-                mergeChunks(&auxA, &auxB);
-                array[i] = auxA;
-                array[j] = auxB;
+            pthread_create(&t0, NULL, (void* (*)(void*)) &SuffixArray::workerMerge, static_cast<void *>(&ta0));
+            pthread_create(&t1, NULL, (void* (*)(void*)) &SuffixArray::workerMerge, static_cast<void *>(&ta1));
 
-            }
+            pthread_join(t0, NULL);
+            pthread_join(t1, NULL);
+
+            auxA = array[i];
+            auxB = array[i + 1];
+            mergeChunks(&auxA, &auxB, 0);
+            array[i] = auxA;
+            array[i + 1] = auxB;
+
             t2.end();
 
             saveState(i + 1, count, total);
@@ -306,19 +326,19 @@ uchar **SuffixArray::search(uchar *substr)
     arraySize = (size / CHUNK_SIZE) + 1;
 
     index = binarySearch(array, 0, arraySize - 1, substr);
-    readChunk(array[index], 0);
+    readChunk(array[index], 0, 0);
 
-    index = binarySearch(chunkA, 0, CHUNK_SIZE - 1, substr);
-    pick(chunkA[index]);
+    index = binarySearch(chunkA[0], 0, CHUNK_SIZE - 1, substr);
+    pick(chunkA[0][index]);
 
-    while (index > 0 && matchFound(chunkA[index], substr)) {
+    while (index > 0 && matchFound(chunkA[0][index], substr)) {
         index--;
     }
     index++;
 
     for (i = 0; i < SEARCH_LIMIT && index + i < CHUNK_SIZE &&
-        matchFound(chunkA[index + i], substr); i++) {
-        ret[i] = getResult(chunkA[index + i]);
+        matchFound(chunkA[0][index + i], substr); i++) {
+        ret[i] = getResult(chunkA[0][index + i]);
     }
 
     for (; i < SEARCH_LIMIT; i++) {
