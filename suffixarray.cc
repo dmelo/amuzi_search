@@ -164,7 +164,7 @@ void SuffixArray::workerMerge(void *ptr)
     ThreadType *t = (ThreadType *) ptr;
     uint auxA, auxB, i = t->i, j, tid = t->tid;
 
-    for (j = i + 2; j < t->obj->count; j += 2) {
+    for (j = i + N_THREAD; j < t->obj->count; j += N_THREAD) {
         auxA = t->obj->array[i];
         auxB = t->obj->array[j];
         t->obj->mergeChunks(&auxA, &auxB, tid);
@@ -177,7 +177,8 @@ bool SuffixArray::loadFile(char *filename)
 {
     uint i, j, k, auxA, auxB;
     FILE *fd;
-    pthread_t t0, t1;
+    pthread_t th[N_THREAD];
+    ThreadType ta[N_THREAD];
 
     printf("Loading file %s for suffix array.\n", filename);
     fflush(stdout);
@@ -211,35 +212,37 @@ bool SuffixArray::loadFile(char *filename)
             i = 0;
         }
 
-        for (i; i < count - 1; i += 2) {
+        for (i; i < count; i++) {;
             timer t2;
-            uint total0 = total;
-            ThreadType ta0, ta1;
-
-            ta0.obj = this;
-            ta0.i = i;
-            ta0.tid = 0;
-
-            ta1.obj = this;
-            ta1.i = i + 1;
-            ta1.tid = 1;
-
             t2.start();
-            pthread_create(&t0, NULL, (void* (*)(void*)) &SuffixArray::workerMerge, static_cast<void *>(&ta0));
-            pthread_create(&t1, NULL, (void* (*)(void*)) &SuffixArray::workerMerge, static_cast<void *>(&ta1));
+            uint total0 = total;
 
-            pthread_join(t0, NULL);
-            pthread_join(t1, NULL);
+            for (j = 0; j < N_THREAD; j++) {
+                ta[j].obj = this;
+                ta[j].i = i + j;
+                ta[j].tid = j;
 
-            auxA = array[i];
-            auxB = array[i + 1];
-            mergeChunks(&auxA, &auxB, 0);
-            array[i] = auxA;
-            array[i + 1] = auxB;
+                pthread_create(&th[j], NULL, (void* (*)(void*)) &SuffixArray::workerMerge, static_cast<void *>(&ta[j]));
+            }
 
-            t2.end();
+
+            for (j = 0; j < N_THREAD; j++) {
+                pthread_join(th[j], NULL);
+            }
+
+            for (j = 0; j < N_THREAD && i + j < count; j++) {
+                for (k = j + 1; k < N_THREAD && i + k < count; k++) {
+                    auxA = array[i + j];
+                    auxB = array[i + k];
+                    mergeChunks(&auxA, &auxB, 0);
+                    array[i + j] = auxA;
+                    array[i + k] = auxB;
+                }
+            }
+
 
             saveState(i + 1, count, total);
+            t2.end();
             printf("%u merges in %s\n", total - total0, t2.toString());
         }
 
