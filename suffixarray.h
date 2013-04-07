@@ -18,10 +18,18 @@ class SuffixArray : public SearchAlg {
     public:
         uint *array, count, total;
         pthread_mutex_t lock;
+        pthread_barrier_t barrier, barrier2;
 
         SuffixArray();
         bool loadFile(char *filename);
         uchar **search(uchar *substr);
+
+        /**
+         * Save current state on disk.
+         */
+        bool saveState(uint i, uint count, uint total);
+
+
     private:
         uint chunkTmp[N_THREAD][CHUNK_SIZE * 2], chunkA[N_THREAD][CHUNK_SIZE],
              chunkB[N_THREAD][CHUNK_SIZE];
@@ -70,11 +78,6 @@ class SuffixArray : public SearchAlg {
          * Load state from disk.
          */
         bool loadState(uint *i, uint *count);
-
-        /**
-         * Save current state on disk.
-         */
-        bool saveState(uint i, uint count, uint total);
 
         /**
          * Verify if full_text[index] matches substr.

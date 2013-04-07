@@ -106,9 +106,9 @@ bool SuffixArray::mergeChunks(uint *iA, uint *iB, uint tid)
     *iA = writeChunk(chunkTmp[tid]);
     *iB = writeChunk(&(chunkTmp[tid][CHUNK_SIZE]));
 
-    //pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     total++;
-    //pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&lock);
 
     return true;
 }
@@ -164,15 +164,57 @@ bool SuffixArray::loadState(uint *i, uint *count)
 void SuffixArray::workerMerge(void *ptr)
 {
     ThreadType *t = (ThreadType *) ptr;
-    uint auxA, auxB, i = t->i, j, tid = t->tid;
+    uint auxA, auxB, i = 0, j, tid = t->tid, k;
 
-    for (j = i + N_THREAD; j < t->obj->count; j += N_THREAD) {
-        auxA = t->obj->array[i];
-        auxB = t->obj->array[j];
-        t->obj->mergeChunks(&auxA, &auxB, tid);
-        t->obj->array[i] = auxA;
-        t->obj->array[j] = auxB;
+    for (; i < t->obj->count; i += N_THREAD) {
+        timer t2;
+        uint total0 = t->obj->total;
+
+        if (0 == tid) {
+            t2.start();
+            printf("thread %u init barrier2\n", tid);
+            pthread_barrier_destroy(&t->obj->barrier2);
+            pthread_barrier_init(&t->obj->barrier2, NULL, N_THREAD);
+        }
+
+        for (j = i + N_THREAD + tid; j < t->obj->count; j += N_THREAD) {
+            auxA = t->obj->array[i + tid];
+            auxB = t->obj->array[j];
+            t->obj->mergeChunks(&auxA, &auxB, tid);
+            t->obj->array[i + tid] = auxA;
+            t->obj->array[j] = auxB;
+        }
+
+        printf("thread %u wait barrier\n", tid);
+        pthread_barrier_wait(&t->obj->barrier);
+
+        if (0 == tid) {
+            for (j = 0; j < N_THREAD && i + j < t->obj->count; j++) {
+                for (k = j + 1; k < N_THREAD && i + k < t->obj->count; k++) {
+                    auxA = t->obj->array[i + j];
+                    auxB = t->obj->array[i + k];
+                    t->obj->mergeChunks(&auxA, &auxB, 0);
+                    t->obj->array[i + j] = auxA;
+                    t->obj->array[i + k] = auxB;
+                }
+            }
+
+            t->obj->saveState(i + 1, t->obj->count, t->obj->total);
+            t2.end();
+            printf("%u merges in %s\n", t->obj->total - total0, t2.toString());
+
+            printf("thread %u init barrier\n", tid);
+            pthread_barrier_destroy(&t->obj->barrier);
+            pthread_barrier_init(&t->obj->barrier, NULL, N_THREAD);
+        }
+
+        printf("thread %u wait barrier2\n", tid);
+        pthread_barrier_wait(&t->obj->barrier2);
     }
+
+
+
+    printf("thread %u exiting\n", tid);
 }
 
 bool SuffixArray::loadFile(char *filename)
@@ -214,42 +256,23 @@ bool SuffixArray::loadFile(char *filename)
             i = 0;
         }
 
-        for (i; i < count; i++) {;
-            timer t2;
-            t2.start();
-            uint total0 = total;
+        pthread_barrier_init(&barrier, NULL, N_THREAD);
+        for (j = 0; j < N_THREAD; j++) {
+            ta[j].obj = this;
+            ta[j].i = j;
+            ta[j].tid = j;
 
-            for (j = 0; j < N_THREAD; j++) {
-                ta[j].obj = this;
-                ta[j].i = i + j;
-                ta[j].tid = j;
-
-                pthread_create(
-                    &th[j],
-                    NULL,
-                    (void* (*)(void*)) &SuffixArray::workerMerge,
-                    static_cast<void *>(&ta[j])
-                );
-            }
+            pthread_create(
+                &th[j],
+                NULL,
+                (void* (*)(void*)) &SuffixArray::workerMerge,
+                static_cast<void *>(&ta[j])
+            );
+        }
 
 
-            for (j = 0; j < N_THREAD; j++) {
-                pthread_join(th[j], NULL);
-            }
-
-            for (j = 0; j < N_THREAD && i + j < count; j++) {
-                for (k = j + 1; k < N_THREAD && i + k < count; k++) {
-                    auxA = array[i + j];
-                    auxB = array[i + k];
-                    mergeChunks(&auxA, &auxB, 0);
-                    array[i + j] = auxA;
-                    array[i + k] = auxB;
-                }
-            }
-
-            saveState(i + 1, count, total);
-            t2.end();
-            printf("%u merges in %s\n", total - total0, t2.toString());
+        for (j = 0; j < N_THREAD; j++) {
+            pthread_join(th[j], NULL);
         }
 
         t.end();
