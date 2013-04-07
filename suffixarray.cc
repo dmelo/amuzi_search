@@ -77,10 +77,22 @@ uint SuffixArray::sortChunk(uint index)
 
 void SuffixArray::removeChunk(uint index)
 {
+    pthread_mutex_lock(&lock);
+    removeStack.insert(index);
+    pthread_mutex_unlock(&lock);
+}
+
+void SuffixArray::removeChunkFlush()
+{
     char filename[1024];
 
-    getFilename(index, filename);
-    remove(filename);
+    pthread_mutex_lock(&lock);
+    for (std::set<uint>::iterator it = removeStack.begin(); it != removeStack.end(); ++it) {
+        getFilename(*it, filename);
+        remove(filename);
+    }
+    removeStack.clear();
+    pthread_mutex_unlock(&lock);
 }
 
 bool SuffixArray::mergeChunks(uint *iA, uint *iB, uint tid)
@@ -107,6 +119,8 @@ bool SuffixArray::mergeChunks(uint *iA, uint *iB, uint tid)
     *iB = writeChunk(&(chunkTmp[tid][CHUNK_SIZE]));
 
     pthread_mutex_lock(&lock);
+    removeStack.erase(*iA);
+    removeStack.erase(*iB);
     total++;
     pthread_mutex_unlock(&lock);
 
@@ -198,11 +212,13 @@ void SuffixArray::workerMerge(void *ptr)
             }
 
             t->obj->saveState(i + 1, t->obj->count, t->obj->total);
+            t->obj->removeChunkFlush();
             t2.end();
             printf("%u merges in %s\n", t->obj->total - total0, t2.toString());
 
             pthread_barrier_destroy(&t->obj->barrier);
             pthread_barrier_init(&t->obj->barrier, NULL, N_THREAD);
+
         }
 
         pthread_barrier_wait(&t->obj->barrier2);
@@ -245,6 +261,7 @@ bool SuffixArray::loadFile(char *filename)
                 for (i = 0; i < count; i++) {
                     array[i] = sortChunk(array[i]);
                 }
+                removeChunkFlush();
                 printf("chunks presorted\n");
                 fflush(stdout);
             }

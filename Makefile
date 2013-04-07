@@ -1,6 +1,6 @@
 CXX=g++
-CXXFLAGS=-g -Ofast -march=native
-#CXXFLAGS=-g
+#CXXFLAGS=-g -Ofast -march=native
+CXXFLAGS=-g
 
 all: amuzi_search catuint
 

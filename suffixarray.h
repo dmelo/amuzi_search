@@ -7,12 +7,16 @@
 #include<limits.h>
 #include<pthread.h>
 #include<stdint.h>
+#include<iostream>
+#include<set>
 #include "timer.h"
 #include "searchalg.h"
 
 #define SORT_FUNCTION mergeSort
 #define PRESORT_CHUNKS 1
 #define N_THREAD 2
+
+using namespace std;
 
 class SuffixArray : public SearchAlg {
     public:
@@ -29,10 +33,18 @@ class SuffixArray : public SearchAlg {
          */
         bool saveState(uint i, uint count, uint total);
 
+        /**
+         * Flush the remove stack.
+         */
+        void removeChunkFlush();
+
+
+
 
     private:
         uint chunkTmp[N_THREAD][CHUNK_SIZE * 2], chunkA[N_THREAD][CHUNK_SIZE],
              chunkB[N_THREAD][CHUNK_SIZE];
+        set<uint> removeStack;
 
         /**
          * Swap two positions on array.
