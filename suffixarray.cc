@@ -19,11 +19,9 @@ SuffixArray::SuffixArray()
 /**
  * Calculate the filename for the a given index.
  */
-char *SuffixArray::getFilename(uint index, char *filename)
+void SuffixArray::getFilename(uint index, char *filename)
 {
     sprintf(filename, "data/%u.array", index);
-
-    return filename;
 }
 
 /**
@@ -98,7 +96,11 @@ bool SuffixArray::mergeChunks(uint *iA, uint *iB, uint tid)
     removeChunk(*iB);
 
     memcpy(chunkTmp[tid], chunkA[tid], CHUNK_SIZE * sizeof(uint));
-    memcpy(&(chunkTmp[tid][CHUNK_SIZE]), chunkB[tid], CHUNK_SIZE * sizeof(uint));
+    memcpy(
+        &(chunkTmp[tid][CHUNK_SIZE]),
+        chunkB[tid],
+        CHUNK_SIZE * sizeof(uint)
+    );
 
     SORT_FUNCTION(chunkTmp[tid], 2 * CHUNK_SIZE);
     *iA = writeChunk(chunkTmp[tid]);
@@ -222,7 +224,12 @@ bool SuffixArray::loadFile(char *filename)
                 ta[j].i = i + j;
                 ta[j].tid = j;
 
-                pthread_create(&th[j], NULL, (void* (*)(void*)) &SuffixArray::workerMerge, static_cast<void *>(&ta[j]));
+                pthread_create(
+                    &th[j],
+                    NULL,
+                    (void* (*)(void*)) &SuffixArray::workerMerge,
+                    static_cast<void *>(&ta[j])
+                );
             }
 
 
@@ -239,7 +246,6 @@ bool SuffixArray::loadFile(char *filename)
                     array[i + k] = auxB;
                 }
             }
-
 
             saveState(i + 1, count, total);
             t2.end();
