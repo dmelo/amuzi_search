@@ -166,7 +166,7 @@ void SuffixArray::workerMerge(void *ptr)
     ThreadType *t = (ThreadType *) ptr;
     uint auxA, auxB, i = 0, j, tid = t->tid, k;
 
-    for (; i < t->obj->count; i += N_THREAD) {
+    for (; i < t->obj->count; i++) {
         timer t2;
         uint total0 = t->obj->total;
 
