@@ -172,7 +172,6 @@ void SuffixArray::workerMerge(void *ptr)
 
         if (0 == tid) {
             t2.start();
-            printf("thread %u init barrier2\n", tid);
             pthread_barrier_destroy(&t->obj->barrier2);
             pthread_barrier_init(&t->obj->barrier2, NULL, N_THREAD);
         }
@@ -185,7 +184,6 @@ void SuffixArray::workerMerge(void *ptr)
             t->obj->array[j] = auxB;
         }
 
-        printf("thread %u wait barrier\n", tid);
         pthread_barrier_wait(&t->obj->barrier);
 
         if (0 == tid) {
@@ -203,12 +201,10 @@ void SuffixArray::workerMerge(void *ptr)
             t2.end();
             printf("%u merges in %s\n", t->obj->total - total0, t2.toString());
 
-            printf("thread %u init barrier\n", tid);
             pthread_barrier_destroy(&t->obj->barrier);
             pthread_barrier_init(&t->obj->barrier, NULL, N_THREAD);
         }
 
-        printf("thread %u wait barrier2\n", tid);
         pthread_barrier_wait(&t->obj->barrier2);
     }
 
