@@ -5,20 +5,16 @@
 #include<stdlib.h>
 #include<string.h>
 #include<limits.h>
-#include<pthread.h>
 #include<stdint.h>
 #include "timer.h"
 #include "searchalg.h"
 
 #define SORT_FUNCTION mergeSort
 #define PRESORT_CHUNKS 1
-#define N_THREAD 2
 
 class SuffixArray : public SearchAlg {
     public:
-        uint *array, count, total;
-        pthread_mutex_t lock;
-        pthread_barrier_t barrier, barrier2;
+        uint *array, count, total, *preArray;
 
         SuffixArray();
         bool loadFile(char *filename);
@@ -31,8 +27,7 @@ class SuffixArray : public SearchAlg {
 
 
     private:
-        uint chunkTmp[N_THREAD][CHUNK_SIZE * 2], chunkA[N_THREAD][CHUNK_SIZE],
-             chunkB[N_THREAD][CHUNK_SIZE];
+        uint chunk[CHUNK_SIZE];
 
         /**
          * Swap two positions on array.
@@ -52,7 +47,7 @@ class SuffixArray : public SearchAlg {
         /**
          * Read chunk from file.
          */
-        void readChunk(uint index, uint varIndex, uint tid);
+        void readChunk(uint index);
 
         /**
          * Sort elements on chunk.
@@ -63,16 +58,6 @@ class SuffixArray : public SearchAlg {
          * Remove chunk.
          */
         void removeChunk(uint index);
-
-        /**
-         * Mege two chunks.
-         */
-        bool mergeChunks(uint *iA, uint *iB, uint tid);
-
-        /**
-         * To be used as a thread.
-         */
-        static void workerMerge(void *ptr);
 
         /**
          * Load state from disk.
@@ -93,12 +78,6 @@ class SuffixArray : public SearchAlg {
          * Take a pick on index. Print just a few chars from that position.
          */
         void pick(uint index);
-};
-
-struct ThreadType {
-    SuffixArray *obj;
-    uint i;
-    uint tid;
 };
 
 #endif

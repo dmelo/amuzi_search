@@ -12,7 +12,6 @@ void SuffixArray::swap(uint i, uint j)
 
 SuffixArray::SuffixArray()
 {
-    lock = PTHREAD_MUTEX_INITIALIZER;
     setCmpDebug(false);
 }
 
@@ -47,19 +46,15 @@ uint SuffixArray::writeChunk(uint *indexFile)
     return ret;
 }
 
-void SuffixArray::readChunk(uint index, uint varIndex, uint tid)
+void SuffixArray::readChunk(uint index)
 {
-    uint *chunk = NULL, aux, i;
+    uint aux, i;
     FILE *fd;
     char filename[1024];
 
     getFilename(index, filename);
     if ((fd = fopen(filename, "rb")) != NULL) {
-        if (0 == varIndex) {
-            fread(chunkA[tid], CHUNK_SIZE, sizeof(uint), fd);
-        } else {
-            fread(chunkB[tid], CHUNK_SIZE, sizeof(uint), fd);
-        }
+        fread(chunk, CHUNK_SIZE, sizeof(uint), fd);
         fclose(fd);
     } else {
         printf("Error: unable to open file %s for reading\n", filename);
@@ -68,11 +63,11 @@ void SuffixArray::readChunk(uint index, uint varIndex, uint tid)
 
 uint SuffixArray::sortChunk(uint index)
 {
-    readChunk(index, 0, 0);
-    quickSort(chunkA[0], CHUNK_SIZE);
+    readChunk(index);
+    quickSort(chunk, CHUNK_SIZE);
     removeChunk(index);
 
-    return writeChunk(chunkA[0]);
+    return writeChunk(chunk);
 }
 
 void SuffixArray::removeChunk(uint index)
@@ -81,36 +76,6 @@ void SuffixArray::removeChunk(uint index)
 
     getFilename(index, filename);
     remove(filename);
-}
-
-bool SuffixArray::mergeChunks(uint *iA, uint *iB, uint tid)
-{
-    uint i;
-    bool ret = false;
-
-    readChunk(*iA, 0, tid);
-    readChunk(*iB, 1, tid);
-
-
-    removeChunk(*iA);
-    removeChunk(*iB);
-
-    memcpy(chunkTmp[tid], chunkA[tid], CHUNK_SIZE * sizeof(uint));
-    memcpy(
-        &(chunkTmp[tid][CHUNK_SIZE]),
-        chunkB[tid],
-        CHUNK_SIZE * sizeof(uint)
-    );
-
-    SORT_FUNCTION(chunkTmp[tid], 2 * CHUNK_SIZE);
-    *iA = writeChunk(chunkTmp[tid]);
-    *iB = writeChunk(&(chunkTmp[tid][CHUNK_SIZE]));
-
-    pthread_mutex_lock(&lock);
-    total++;
-    pthread_mutex_unlock(&lock);
-
-    return true;
 }
 
 bool SuffixArray::saveState(uint i, uint count, uint total)
@@ -161,84 +126,31 @@ bool SuffixArray::loadState(uint *i, uint *count)
     return ret;
 }
 
-void SuffixArray::workerMerge(void *ptr)
-{
-    ThreadType *t = (ThreadType *) ptr;
-    uint auxA, auxB, i = 0, j, tid = t->tid, k;
-
-    for (; i < t->obj->count; i++) {
-        timer t2;
-        uint total0 = t->obj->total;
-
-        if (0 == tid) {
-            t2.start();
-            pthread_barrier_destroy(&t->obj->barrier2);
-            pthread_barrier_init(&t->obj->barrier2, NULL, N_THREAD);
-        }
-
-        for (j = i + N_THREAD + tid; j < t->obj->count; j += N_THREAD) {
-            auxA = t->obj->array[i + tid];
-            auxB = t->obj->array[j];
-            t->obj->mergeChunks(&auxA, &auxB, tid);
-            t->obj->array[i + tid] = auxA;
-            t->obj->array[j] = auxB;
-        }
-
-        pthread_barrier_wait(&t->obj->barrier);
-
-        if (0 == tid) {
-            for (j = 0; j < N_THREAD && i + j < t->obj->count; j++) {
-                for (k = j + 1; k < N_THREAD && i + k < t->obj->count; k++) {
-                    auxA = t->obj->array[i + j];
-                    auxB = t->obj->array[i + k];
-                    t->obj->mergeChunks(&auxA, &auxB, 0);
-                    t->obj->array[i + j] = auxA;
-                    t->obj->array[i + k] = auxB;
-                }
-            }
-
-            t->obj->saveState(i + 1, t->obj->count, t->obj->total);
-            t2.end();
-            printf("%u merges in %s\n", t->obj->total - total0, t2.toString());
-
-            pthread_barrier_destroy(&t->obj->barrier);
-            pthread_barrier_init(&t->obj->barrier, NULL, N_THREAD);
-        }
-
-        pthread_barrier_wait(&t->obj->barrier2);
-    }
-
-
-
-    printf("thread %u exiting\n", tid);
-}
-
 bool SuffixArray::loadFile(char *filename)
 {
     uint i, j, k, auxA, auxB;
     FILE *fd;
-    pthread_t th[N_THREAD];
-    ThreadType ta[N_THREAD];
 
     printf("Loading file %s for suffix array.\n", filename);
     fflush(stdout);
     if (getFullText(filename)) {
         // Allocate memory for suffix array.
         array = (uint *) malloc(((size / CHUNK_SIZE) + 1) * sizeof(uint));
-        timer t;
 
         if (!loadState(&i, &count)) {
+            preArray = (uint *) malloc(
+                ((size / PRE_CHUNK_SIZE) + 1) * sizeof(uint)
+            );
             count = 0;
-            for (i = 0; i < size; i += CHUNK_SIZE) {
-                for (j = 0; j < CHUNK_SIZE; j++) {
-                    chunkA[0][j] = i + j < size ? i + j : UINT_MAX;
+            for (i = 0; i < size; i += PRE_CHUNK_SIZE) {
+                for (j = 0; j < PRE_CHUNK_SIZE; j++) {
+                    chunk[j] = i + j < size ? i + j : UINT_MAX;
                 }
-                array[count] = writeChunk(chunkA[0]);
+                array[count] = writeChunk(chunk);
                 count++;
             }
 
             total = 0;
-            t.start();
             if (PRESORT_CHUNKS) {
                 printf("start presoring chunks\n");
                 fflush(stdout);
@@ -250,31 +162,10 @@ bool SuffixArray::loadFile(char *filename)
             }
             
             i = 0;
+
+            // TODO: SORT CHUNKS
         }
 
-        pthread_barrier_init(&barrier, NULL, N_THREAD);
-        for (j = 0; j < N_THREAD; j++) {
-            ta[j].obj = this;
-            ta[j].i = j;
-            ta[j].tid = j;
-
-            pthread_create(
-                &th[j],
-                NULL,
-                (void* (*)(void*)) &SuffixArray::workerMerge,
-                static_cast<void *>(&ta[j])
-            );
-        }
-
-
-        for (j = 0; j < N_THREAD; j++) {
-            pthread_join(th[j], NULL);
-        }
-
-        t.end();
-        printf("merge %u chunks %s\n\n", total, t.toString());
-        fflush(stdout);
-        fflush(stderr);
     }
 }
 
@@ -354,19 +245,19 @@ uchar **SuffixArray::search(uchar *substr)
     arraySize = (size / CHUNK_SIZE) + 1;
 
     index = binarySearch(array, 0, arraySize - 1, substr);
-    readChunk(array[index], 0, 0);
+    readChunk(array[index]);
 
-    index = binarySearch(chunkA[0], 0, CHUNK_SIZE - 1, substr);
-    pick(chunkA[0][index]);
+    index = binarySearch(chunk, 0, CHUNK_SIZE - 1, substr);
+    pick(chunk[index]);
 
-    while (index > 0 && matchFound(chunkA[0][index], substr)) {
+    while (index > 0 && matchFound(chunk[index], substr)) {
         index--;
     }
     index++;
 
     for (i = 0; i < SEARCH_LIMIT && index + i < CHUNK_SIZE &&
-        matchFound(chunkA[0][index + i], substr); i++) {
-        ret[i] = getResult(chunkA[0][index + i]);
+        matchFound(chunk[index + i], substr); i++) {
+        ret[i] = getResult(chunk[index + i]);
     }
 
     for (; i < SEARCH_LIMIT; i++) {
