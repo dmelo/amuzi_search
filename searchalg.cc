@@ -6,7 +6,7 @@ bool SearchAlg::getFullText(char *filename) {
 
     if ((fd = fopen(filename, "rb")) != NULL) {
         fseek(fd, 0, SEEK_END);
-        size = ftell(fd);
+        size = (uint) ftell(fd);
         fseek(fd, 0, SEEK_SET);
         full_text = (uchar *) malloc((size + 1) * sizeof(uchar));
         if (size != (fread_ret = fread(full_text, sizeof(uchar), size, fd))) {
@@ -78,7 +78,7 @@ void SearchAlg::quickSortInternal(uint *list, uint l, uint r)
             quickSortInternal(list, l, j - 1);
         }
 
-        if (j < r) {
+        if (j < r && UINT_MAX != list[j]) {
             quickSortInternal(list, j + 1, r);
         }
     }

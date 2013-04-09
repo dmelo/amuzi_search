@@ -10,7 +10,17 @@
 #include "searchalg.h"
 
 #define SORT_FUNCTION mergeSort
-#define PRESORT_CHUNKS 1
+
+struct ExternalSorting {
+    uint **queues, // An array of queues
+         queueSize, // The size/depth of each queue
+         queueNum, // Number of queues, equals to the number of preChunks
+         *queuePos, // Internal position on each queue
+         *queueLimit, // The end of each queue.
+         *queueExtPos; // absolute position on the file.
+};
+
+
 
 class SuffixArray : public SearchAlg {
     public:
@@ -27,7 +37,8 @@ class SuffixArray : public SearchAlg {
 
 
     private:
-        uint chunk[CHUNK_SIZE];
+        uint chunk[CHUNK_SIZE > PRE_CHUNK_SIZE ? CHUNK_SIZE : PRE_CHUNK_SIZE];
+        ExternalSorting q;
 
         /**
          * Swap two positions on array.
@@ -37,27 +48,27 @@ class SuffixArray : public SearchAlg {
         /**
          * Calculate the file name.
          */
-        void getFilename(uint index, char *filename);
+        void getFilename(uint index, bool pre, char *filename);
 
         /**
          * Write chunk on file.
          */
-        uint writeChunk(uint *indexFile);
+        uint writeChunk(uint *indexFile, bool pre);
 
         /**
          * Read chunk from file.
          */
-        void readChunk(uint index);
+        void readChunk(uint index, bool pre);
 
         /**
          * Sort elements on chunk.
          */
-        uint sortChunk(uint index);
+        uint sortPreChunk(uint index);
 
         /**
          * Remove chunk.
          */
-        void removeChunk(uint index);
+        void removeChunk(uint index, bool pre);
 
         /**
          * Load state from disk.
@@ -78,6 +89,12 @@ class SuffixArray : public SearchAlg {
          * Take a pick on index. Print just a few chars from that position.
          */
         void pick(uint index);
+
+
+        void initQueues();
+        void loadQueue(uint index);
+        void loadAllQueues();
+        uint mergeQueue();
 };
 
 #endif
