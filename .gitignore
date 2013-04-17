@@ -5,3 +5,4 @@ catuint
 *.o
 data/*
 data_*
+env_*
