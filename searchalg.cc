@@ -164,7 +164,7 @@ uchar *SearchAlg::getResult(uint i)
     uint start, end, j;
     uchar *ret = NULL;
 
-    for(start = i; '\n' != full_text[start] && start >= 0; start--);
+    for(start = i; UINT_MAX != start && '\n' != full_text[start]; start--);
     start++;
     for(end = i; '\n' != full_text[end] && end < size; end++);
     ret = (uchar *) malloc((end - start + 1) * sizeof(uchar));
