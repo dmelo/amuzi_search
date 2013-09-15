@@ -132,10 +132,10 @@ bool SuffixArray::loadState(uint *i, uint *count)
 
 void SuffixArray::initQueues()
 {
-    q.queueSize = MEM_CHUNKS / (count * sizeof(uint));
+    q.queueSize = MEM_CHUNKS / (count > 0 ? count * sizeof(uint) : sizeof(uint));
     q.queueSize = q.queueSize > PRE_CHUNK_SIZE ?
         PRE_CHUNK_SIZE : q.queueSize;
-    q.queueNum = (size / PRE_CHUNK_SIZE) + 1;
+    q.queueNum = size > 0 ? (size / PRE_CHUNK_SIZE) + 1 : 0;
 
     q.queuePos = (uint *) calloc(q.queueSize, sizeof(uint));
     q.queueLimit = (uint *) calloc(q.queueSize, sizeof(uint));
@@ -276,7 +276,7 @@ bool SuffixArray::matchFound(uint index, uchar *substr)
 {
     uint len = strlen((const char *) substr), i;
 
-    if (UINT_MAX == index) {
+    if (UINT_MAX == index || index + len >= size) {
         return false;
     }
 
@@ -293,7 +293,7 @@ void SuffixArray::pick(uint index)
 {
     char p[15];
     uint i;
-    for (i = 0; i < 14; i++) {
+    for (i = 0; i < 14 && i + index < size; i++) {
         p[i] = (char) full_text[index + i];
     }
     p[14] = '\0';
@@ -335,25 +335,27 @@ uchar **SuffixArray::search(uchar *substr)
     timer t;
     t.start();
     printf("searching %s\n", (char *) substr);
-    uint arraySize, index, i;
+    uint arraySize, index, i = 0;
 
-    arraySize = (size / CHUNK_SIZE) + 1;
+    if (size > 0) {
+        arraySize = (size / CHUNK_SIZE) + 1;
 
-    index = binarySearch(array, 0, arraySize - 1, substr);
-    readChunk(array[index], false);
+        index = binarySearch(array, 0, arraySize - 1, substr);
+        readChunk(array[index], false);
 
-    index = binarySearch(chunk, 0, CHUNK_SIZE - 1, substr);
-    pick(chunk[index]);
+        index = binarySearch(chunk, 0, CHUNK_SIZE - 1, substr);
+        pick(chunk[index]);
 
-    while (index > 0 && matchFound(chunk[index], substr)) {
-        index--;
-    }
-    index++;
+        while (index > 0 && matchFound(chunk[index], substr)) {
+            index--;
+        }
+        index++;
 
 
-    for (i = 0; i < SEARCH_LIMIT && index + i < CHUNK_SIZE &&
-        matchFound(chunk[index + i], substr); i++) {
-        ret[i] = getResult(chunk[index + i]);
+        for (; i < SEARCH_LIMIT && index + i < CHUNK_SIZE &&
+            matchFound(chunk[index + i], substr); i++) {
+            ret[i] = getResult(chunk[index + i]);
+        }
     }
 
     for (; i < SEARCH_LIMIT; i++) {
