@@ -100,15 +100,12 @@ int main(int argc, char **argv)
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
 
-
-    printf("aa\n");
-    printf("%d\n", argc);
     if (1 == argc) {
         printf("Usage: amuzi_search {bmh|suffixarray} file port\n");
     } else if (2 == argc) {
         TestSort *testSort = new TestSort();
         if (strcmp(argv[1], "test_sort_algs") == 0) {
-            printf("test_sort_algs\n");
+            printf("Testing sort algorithms.\n");
             testSort->testAlgs();
         }
     } else if (4 == argc){

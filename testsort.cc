@@ -107,26 +107,26 @@ void TestSort::testAlgs()
     // TODO: this class is shit. reimplement with pointers to functions.
     setCmpDebug(true);
     if (testQuickSort()) {
-        printf("Quicksort is good to go\n\n");
+        printf("\033[0;32mQuicksort is good to go\n");
     } else {
-        printf("Quicksort failed\n\n");
+        printf("\033[0;31mQuicksort failed\n");
     }
 
     if (testInsertionSort()) {
-        printf("InsertionSort is good to go\n\n");
+        printf("\033[0;32mInsertionSort is good to go\n");
     } else {
-        printf("InsertionSort failed\n\n");
+        printf("\033[0;31mInsertionSort failed\n");
     }
 
     if (testMergeSort()) {
-        printf("MergeSort is good to go\n\n");
+        printf("\033[0;32mMergeSort is good to go\n");
     } else {
-        printf("MergeSort failed\n\n");
+        printf("\033[0;31mMergeSort failed\n");
     }
 
     if (testBfSort()) {
-        printf("BfSort is good to go\n\n");
+        printf("\033[0;32mBfSort is good to go\n");
     } else {
-        printf("BfSort failed\n\n");
+        printf("\033[0;31mBfSort failed\n");
     }
 }

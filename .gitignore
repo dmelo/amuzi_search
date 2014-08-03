@@ -6,3 +6,4 @@ catuint
 data/*
 data_*
 env_*
+tmp/*
