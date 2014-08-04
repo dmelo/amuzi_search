@@ -211,6 +211,7 @@ bool SuffixArray::loadFile(char *filename)
     uint i, j, k, auxA, auxB;
     FILE *fd;
 
+
     printf("Loading file %s for suffix array.\n", filename);
     fflush(stdout);
     if (getFullText(filename)) {

@@ -122,7 +122,6 @@ int main(int argc, char **argv)
         // Initialize
         sa->loadFile(argv[2]);
 
-
         // Initialize mutex
         if (pthread_mutex_init(&lock, NULL) != 0) {
             error("ERROR could not initialize mutex\n");

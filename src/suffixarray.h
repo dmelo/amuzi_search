@@ -6,8 +6,11 @@
 #include<string.h>
 #include<limits.h>
 #include<stdint.h>
+#include<boost/tokenizer.hpp>
 #include "timer.h"
 #include "searchalg.h"
+
+using namespace boost;
 
 #define SORT_FUNCTION mergeSort
 
