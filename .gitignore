@@ -7,3 +7,13 @@ data/*
 data_*
 env_*
 tmp/*
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache/
+config.h
+config.h.in
+config.h.in~
+config.status
+configure
+stamp-h1

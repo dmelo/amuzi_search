@@ -7,7 +7,7 @@ CXXFLAGS=-g -Ofast -march=native
 all: ${BIN}/amuzi_search ${BIN}/catuint
 
 clean:
-	rm *.o ${BIN}/amuzi_search ${BIN}catuint
+	rm ${BIN}/*.o ${BIN}/amuzi_search ${BIN}/catuint
 
 ${BIN}/amuzi_search: ${BIN}/timer.o ${BIN}/bmh.o ${BIN}/suffixarray.o ${BIN}/testsort.o ${SRC}/main.cc
 	$(CXX) $(CXXFLAGS) ${BIN}/timer.o ${BIN}/bmh.o ${BIN}/suffixarray.o ${BIN}/testsort.o ${BIN}/searchalg.o ${SRC}/main.cc -o ${BIN}/amuzi_search -lpthread
