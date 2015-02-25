@@ -1,30 +1,32 @@
 CXX=g++
 CXXFLAGS=-g -Ofast -march=native
 #CXXFLAGS=-g
+BIN=bin
+SRC=src
 
-all: amuzi_search catuint
+all: ${BIN}/amuzi_search ${BIN}/catuint
 
 clean:
-	rm *.o amuzi_search catuint
+	rm ${BIN}/*
 
-amuzi_search: timer.o bmh.o suffixarray.o testsort.o main.cc
-	$(CXX) $(CXXFLAGS) timer.o bmh.o suffixarray.o testsort.o searchalg.o main.cc -o amuzi_search -lpthread
+${BIN}/amuzi_search: ${BIN}/timer.o ${BIN}/bmh.o ${BIN}/suffixarray.o ${BIN}/testsort.o ${SRC}/main.cc
+	$(CXX) $(CXXFLAGS) ${BIN}/timer.o ${BIN}/bmh.o ${BIN}/suffixarray.o ${BIN}/testsort.o ${BIN}/searchalg.o ${SRC}/main.cc -o ${BIN}/amuzi_search -lpthread
 
-searchalg.o: searchalg.cc searchalg.h defs.h
-	$(CXX) $(CXXFLAGS) -c searchalg.cc -o searchalg.o
+${BIN}/searchalg.o: ${SRC}/searchalg.cc ${SRC}/searchalg.h ${SRC}/defs.h
+	$(CXX) $(CXXFLAGS) -c ${SRC}/searchalg.cc -o ${BIN}/searchalg.o
 
-timer.o: timer.cc timer.h searchalg.o
-	$(CXX) $(CXXFLAGS) -c timer.cc -o timer.o
+${BIN}/timer.o: ${SRC}/timer.cc ${SRC}/timer.h ${BIN}/searchalg.o
+	$(CXX) $(CXXFLAGS) -c ${SRC}/timer.cc -o ${BIN}/timer.o
 
-bmh.o: bmh.cc bmh.h searchalg.o
-	$(CXX) $(CXXFLAGS) -c bmh.cc -o bmh.o
+${BIN}/bmh.o: ${SRC}/bmh.cc ${SRC}/bmh.h ${BIN}/searchalg.o
+	$(CXX) $(CXXFLAGS) -c ${SRC}/bmh.cc -o ${BIN}/bmh.o
 
-testsort.o: testsort.cc testsort.h searchalg.o
-	$(CXX) $(CXXFLAGS) -c testsort.cc -o testsort.o
+${BIN}/testsort.o: ${SRC}/testsort.cc ${SRC}/testsort.h ${BIN}/searchalg.o
+	$(CXX) $(CXXFLAGS) -c ${SRC}/testsort.cc -o ${BIN}/testsort.o
 
-suffixarray.o: suffixarray.cc suffixarray.h searchalg.o
-	$(CXX) $(CXXFLAGS) -c suffixarray.cc -o suffixarray.o
+${BIN}/suffixarray.o: ${SRC}/suffixarray.cc ${SRC}/suffixarray.h ${BIN}/searchalg.o
+	$(CXX) $(CXXFLAGS) -c ${SRC}/suffixarray.cc -o ${BIN}/suffixarray.o
 
-catuint: catuint.cc defs.h
-	$(CXX) $(CXXFLAGS) catuint.cc -o catuint
+${BIN}/catuint: ${SRC}/catuint.cc ${SRC}/defs.h
+	$(CXX) $(CXXFLAGS) ${SRC}/catuint.cc -o ${BIN}/catuint
 
